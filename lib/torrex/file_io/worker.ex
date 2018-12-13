@@ -33,22 +33,22 @@ defmodule Torrex.FileIO.Worker do
     GenServer.cast(pid, {:save_piece, index, piece})
   end
 
-  def handle_cast({:save_piece, index, piece}, %{pieces: pieces, control_pid: pid} = state) do
+  def handle_cast({:save_piece, index, piece}, %{pieces: pieces, info_hash: info_hash} = state) do
     {hash, piece_info} = Map.get(pieces, index)
 
     case :crypto.hash(:sha, piece) do
       ^hash ->
-        write_piece(index, piece, piece_info, pid)
+        write_piece(piece, piece_info)
+        TorrentTable.saved(info_hash, byte_size(piece))
         {:noreply, state}
 
       _ ->
-        TorrentControl.failed_piece(pid, index)
+        TorrentControl.failed_piece(state.control_pid, index)
         {:noreply, state}
     end
   end
 
-  def write_piece(index, piece, piece_info, control_pid) do
+  def write_piece(piece, piece_info) do
     FileUtils.write_piece(piece, piece_info)
-    TorrentControl.notify_saved(control_pid, index)
   end
 end

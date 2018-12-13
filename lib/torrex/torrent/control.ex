@@ -141,7 +141,6 @@ defmodule Torrex.Torrent.Control do
   end
 
   def handle_cast({:saved, index}, %{bitfield: bitfield, downloading: downloading} = state) do
-    Logger.debug("Saved index #{index}")
     PeerControl.notify_saved(state.peer_control_pid, index)
     bitfield = MapSet.put(bitfield, index)
     downloading = MapSet.delete(downloading, index)
@@ -170,7 +169,9 @@ defmodule Torrex.Torrent.Control do
     {:ok, _manager_pid} =
       TorrentSupervisor.start_peer_manager(info_hash, self(), file_worker, sup_pid)
 
+    TorrentTable.size_on_disk(info_hash, calculate_size_on_disk(bitfield, state))
     :ok = TorrentTable.release_check()
+
     Process.demonitor(ref)
     {:noreply, %{state | bitfield: bitfield, status: :started, tracker_pid: tracker_pid}}
   end
@@ -182,5 +183,15 @@ defmodule Torrex.Torrent.Control do
 
   defp check_torrent(info_hash) do
     FileUtils.check_torrent(info_hash)
+  end
+
+  defp calculate_size_on_disk(bitfield, state) do
+    count = bitfield |> Enum.to_list() |> length
+
+    if (state.num_pieces - 1) in bitfield do
+      (count - 1) * state.piece_length + state.last_piece_length
+    else
+      count * state.piece_length
+    end
   end
 end
