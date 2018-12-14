@@ -34,3 +34,21 @@ config :torrex,
   tcp_port: 6885,
   udp_port: Enum.random(21_001..22_000),
   download_dir: "/home/ryotsu/workspace/torrex/Downloads"
+
+config :torrex, TorrexWeb.Endpoint,
+  url: [host: "localhost"],
+  secret_key_base: "RTrRiDVZy2ZFkbpWPXw2+eEmGP0FRDwEen1TkfmbNn++rYYFNaPGTHxn2gCMtZc+",
+  render_errors: [view: TorrexWeb.ErrorView, accepts: ~w(html json)],
+  pubsub: [name: Torrex.PubSub, adapter: Phoenix.PubSub.PG2]
+
+# Configures Elixir's Logger
+config :logger, :console,
+  format: "$time $metadata[$level] $message\n",
+  metadata: [:request_id]
+
+# Use Jason for JSON parsing in Phoenix
+config :phoenix, :json_library, Jason
+
+# Import environment specific config. This must remain at the bottom
+# of this file so it overrides the configuration defined above.
+import_config "#{Mix.env()}.exs"

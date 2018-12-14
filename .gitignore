@@ -24,3 +24,7 @@ torrex-*.tar
 
 Downloads
 torrents
+npm-debug.log
+/assets/node_modules
+/priv/static
+/config/*.secret.exs

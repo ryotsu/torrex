@@ -5,8 +5,8 @@ defmodule Torrex.Supervisor do
 
   use Supervisor
 
-  def start_link(peer_id, tcp_port, udp_port) do
-    Supervisor.start_link(__MODULE__, [peer_id, tcp_port, udp_port], name: __MODULE__)
+  def start_link(args) do
+    Supervisor.start_link(__MODULE__, args, name: __MODULE__)
   end
 
   def init([peer_id, tcp_port, udp_port]) do

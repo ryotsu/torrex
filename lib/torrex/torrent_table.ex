@@ -233,7 +233,7 @@ defmodule Torrex.TorrentTable do
   end
 
   defp notify_left(size, info_hash, %{subscribers: subs}) do
-    payload = %{info_hash => %{left: size}}
+    payload = %{info_hash => size}
 
     for {_ref, pid} <- subs do
       send(pid, {:left, payload})
@@ -255,14 +255,14 @@ defmodule Torrex.TorrentTable do
 
   defp calc_download_speed(downloads) do
     downloads
-    |> Enum.map(fn {info_hash, data} -> {info_hash, %{download_speed: Enum.sum(data) / 5}} end)
+    |> Enum.map(fn {info_hash, data} -> {info_hash, Enum.sum(data) / 5} end)
     |> Enum.into(%{})
   end
 
   defp make_init_payload(%{torrents: torrents, downloads: downloads}) do
     downloads
     |> calc_download_speed
-    |> Enum.map(fn {info_hash, %{download_speed: speed}} ->
+    |> Enum.map(fn {info_hash, speed} ->
       {_pid, torrent} = torrents[info_hash]
 
       {info_hash,
