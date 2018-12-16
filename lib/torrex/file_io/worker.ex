@@ -40,6 +40,7 @@ defmodule Torrex.FileIO.Worker do
       ^hash ->
         write_piece(piece, piece_info)
         TorrentTable.saved(info_hash, byte_size(piece))
+        TorrentControl.notify_saved(state.control_pid, index)
         {:noreply, state}
 
       _ ->

@@ -34,8 +34,11 @@ defmodule Torrex.Tracker.UDP do
 
   def handle_cast({:contact, pid, ip, port, event, info_hash}, state) do
     transaction_id = :crypto.strong_rand_bytes(4)
-    connections = Map.put(state.connections, transaction_id, {info_hash, pid, event})
-    state = connect(ip, port, transaction_id, state)
+
+    connections =
+      Map.put(state.connections, transaction_id, {info_hash, pid, event, {ip, port}, :connect})
+
+    state = connect(ip, port, transaction_id, state, 0)
 
     {:noreply, %{state | connections: connections}}
   end
@@ -48,11 +51,12 @@ defmodule Torrex.Tracker.UDP do
     <<transaction_id::bytes-size(4), connection_id::bytes-size(8)>> = response
 
     case Map.pop(state.connections, transaction_id) do
-      {{info_hash, _pid, event} = info, connections} ->
+      {{info_hash, pid, event, addr, _status}, connections} ->
         state = cancel_timeout(state, transaction_id)
         transaction_id = :crypto.strong_rand_bytes(4)
+        info = {info_hash, pid, event, addr, {:announce, connection_id}}
         connections = Map.put(connections, transaction_id, info)
-        state = announce(ip, port, transaction_id, connection_id, info_hash, event, state)
+        state = announce(ip, port, transaction_id, connection_id, info_hash, event, state, 0)
         {:noreply, %{state | connections: connections}}
 
       {nil, _connections} ->
@@ -62,7 +66,7 @@ defmodule Torrex.Tracker.UDP do
 
   def handle_info({:udp, _, _, _, <<1::size(32), tid::bytes-size(4), resp::binary>>}, state) do
     case Map.pop(state.connections, tid) do
-      {{_info_hash, pid, _event}, connections} ->
+      {{_info_hash, pid, _event, _addr, _status}, connections} ->
         state = cancel_timeout(state, tid)
         :ok = handle_success_response(resp, pid)
         {:noreply, %{state | connections: connections}}
@@ -72,12 +76,33 @@ defmodule Torrex.Tracker.UDP do
     end
   end
 
-  def handle_info(transaction_id, %{connections: connections, timers: timers} = state) do
-    {{_info_hash, pid, _event}, connections} = Map.pop(connections, transaction_id)
+  def handle_info({transaction_id, 3}, %{connections: connections, timers: timers} = state) do
+    {{_info_hash, pid, _event, _addr, _sts}, connections} = Map.pop(connections, transaction_id)
     timers = Map.delete(timers, transaction_id)
     Tracker.error(pid, "timeout")
 
     {:noreply, %{state | connections: connections, timers: timers}}
+  end
+
+  def handle_info({transaction_id, count}, %{connections: conns} = state) do
+    state = cancel_timeout(state, transaction_id)
+    t_id = :crypto.strong_rand_bytes(4)
+
+    case Map.pop(conns, transaction_id) do
+      {{_ih, _pid, _event, {ip, port}, :connect} = conn, conns} ->
+        state = %{state | connections: Map.put(conns, t_id, conn)}
+        state = connect(ip, port, t_id, state, count + 1)
+        {:noreply, state}
+
+      {{info_hash, _pid, event, {ip, port}, {:announce, conn_id}} = conn, conns} ->
+        state = %{state | connections: Map.put(conns, t_id, conn)}
+        state = announce(ip, port, t_id, conn_id, info_hash, event, state, count + 1)
+        {:noreply, state}
+
+      _ ->
+        Logger.debug("No transaction_id found: #{inspect(transaction_id)}")
+        {:noreply, state}
+    end
   end
 
   defp handle_success_response(response, pid) do
@@ -86,18 +111,18 @@ defmodule Torrex.Tracker.UDP do
     Tracker.response(pid, {interval, nil}, {seeders, leachers, peers})
   end
 
-  @spec connect(ip, integer, binary, map) :: map
-  defp connect(ip, port, transaction_id, %{socket: socket} = state) do
+  @spec connect(ip, integer, binary, map, integer) :: map
+  defp connect(ip, port, transaction_id, %{socket: socket} = state, count) do
     msg = build_request(:connect, transaction_id)
     :gen_udp.send(socket, ip, port, msg)
-    add_timeout(state, transaction_id)
+    add_timeout(state, transaction_id, count)
   end
 
-  @spec announce(ip, integer, binary, binary, binary, atom, map) :: map
-  defp announce(ip, port, tid, conn_id, info_hash, event, %{socket: socket} = state) do
+  @spec announce(ip, integer, binary, binary, binary, atom, map, integer) :: map
+  defp announce(ip, port, tid, conn_id, info_hash, event, %{socket: socket} = state, count) do
     msg = build_request(:announce, tid, conn_id, info_hash, event, state.peer_id, state.port)
     :ok = :gen_udp.send(socket, ip, port, msg)
-    add_timeout(state, tid)
+    add_timeout(state, tid, count)
   end
 
   @spec build_request(:connect, binary) :: binary
@@ -143,9 +168,9 @@ defmodule Torrex.Tracker.UDP do
     end
   end
 
-  @spec add_timeout(map, binary) :: map
-  defp add_timeout(%{timers: timers} = state, transaction_id) do
-    timer = Process.send_after(self(), transaction_id, @timeout)
+  @spec add_timeout(map, binary, integer) :: map
+  defp add_timeout(%{timers: timers} = state, transaction_id, count) do
+    timer = Process.send_after(self(), {transaction_id, count}, @timeout)
     timers = Map.put(timers, transaction_id, timer)
     %{state | timers: timers}
   end

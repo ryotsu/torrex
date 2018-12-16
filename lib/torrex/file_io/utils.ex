@@ -3,13 +3,15 @@ defmodule Torrex.FileIO.Utils do
   Utilities for managing files
   """
 
+  alias Torrex.TorrentTable
+
   @write_opts [:read, :write, :delayed_write, :binary, :raw]
 
   @read_opts [:read, :binary, :raw]
 
   @spec check_torrent(binary) :: MapSet.t()
   def check_torrent(info_hash) do
-    {:ok, torrent} = Torrex.TorrentTable.get_torrent(info_hash)
+    {:ok, torrent} = TorrentTable.get_torrent(info_hash)
     true = ensure_torrent_paths(torrent.files) |> Enum.all?(&(&1 == :ok))
 
     check_all_pieces(torrent.pieces)

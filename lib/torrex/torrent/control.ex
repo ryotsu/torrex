@@ -10,6 +10,7 @@ defmodule Torrex.Torrent.Control do
   alias Torrex.Peer.Control, as: PeerControl
   alias Torrex.Torrent.Supervisor, as: TorrentSupervisor
   alias Torrex.FileIO.Utils, as: FileUtils
+  alias Torrex.Listener
   alias Torrex.TorrentTable
   alias Torrex.Tracker
 
@@ -165,6 +166,7 @@ defmodule Torrex.Torrent.Control do
   def handle_info({ref, bitfield}, %{info_hash: info_hash, sup_pid: sup_pid} = state) do
     {:ok, tracker_pid} = TorrentSupervisor.add_tracker(info_hash, self(), sup_pid)
     {:ok, file_worker} = TorrentSupervisor.start_file_worker(info_hash, self(), sup_pid)
+    Listener.add_torrent(info_hash, self(), file_worker)
 
     {:ok, _manager_pid} =
       TorrentSupervisor.start_peer_manager(info_hash, self(), file_worker, sup_pid)

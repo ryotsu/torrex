@@ -13,6 +13,10 @@ defmodule Torrex.Peer.Pool do
     DynamicSupervisor.count_children(pid)
   end
 
+  def get_children(pid) do
+    DynamicSupervisor.which_children(pid)
+  end
+
   def start_peer(pid, socket, control_pid, file_worker) do
     spec = {PeerWorker, [socket, control_pid, file_worker]}
     DynamicSupervisor.start_child(pid, spec)

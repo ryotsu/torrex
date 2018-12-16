@@ -14,8 +14,8 @@ defmodule Torrex.Supervisor do
       supervisor(Torrex.Torrent.Pool, []),
       supervisor(Torrex.Tracker.Pool, [peer_id, tcp_port, udp_port]),
       worker(Torrex.TorrentTable, [peer_id]),
-      worker(Torrex.UPnP, [tcp_port])
-      # worker(Torrex.Listner, [tcp_port])
+      worker(Torrex.UPnP, [tcp_port]),
+      worker(Torrex.Listener, [tcp_port])
     ]
 
     supervise(children, strategy: :one_for_all)

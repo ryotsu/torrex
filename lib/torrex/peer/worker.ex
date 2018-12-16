@@ -14,6 +14,10 @@ defmodule Torrex.Peer.Worker do
     GenServer.start_link(__MODULE__, args)
   end
 
+  def notify_have(pid, index) do
+    GenServer.cast(pid, {:have, index})
+  end
+
   def init([socket, control_pid, file_worker]) do
     bitfield = TorrentControl.get_bitfield(control_pid)
     num_pieces = TorrentControl.get_num_pieces(control_pid)
@@ -50,6 +54,11 @@ defmodule Torrex.Peer.Worker do
 
   def handle_continue(:downloading, state) do
     receive_message(state)
+  end
+
+  def handle_cast({:have, index}, state) do
+    have(index, state)
+    {:noreply, state}
   end
 
   def handle_info(:next_tick, %{status: :idle, am_interested: false} = state) do
@@ -194,7 +203,7 @@ defmodule Torrex.Peer.Worker do
   Handles choke
   """
   def handle_message(0, _, state) do
-    {:stop, :normal, %{state | peer_choking: true}}
+    {:ok, :normal, %{state | peer_choking: true}}
   end
 
   @doc """

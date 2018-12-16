@@ -1,6 +1,8 @@
 defmodule TorrexWeb.TorrexChannel do
   use Phoenix.Channel
 
+  require Logger
+
   def join("torrex:notifications", _message, socket) do
     torrents = Torrex.TorrentTable.subscribe()
     {payload, socket} = encode_info_hash(torrents, socket)

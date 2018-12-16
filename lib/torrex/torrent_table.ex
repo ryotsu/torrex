@@ -155,13 +155,13 @@ defmodule Torrex.TorrentTable do
       torrent = %Torrent{
         torrent
         | downloaded: torrent.downloaded + size,
-          left: torrent.size - size
+          left: torrent.left - size
       }
 
       state = %{
         state
         | torrents: %{torrents | info_hash => {pid, torrent}},
-          downloads: %{state.torrents | info_hash => [recent + size | rest]}
+          downloads: %{state.downloads | info_hash => [recent + size | rest]}
       }
 
       notify_saved(size, info_hash, state)

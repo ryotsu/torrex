@@ -5,9 +5,11 @@ defmodule Torrex.Peer.Control do
 
   alias Torrex.Torrent.Control, as: TorrentControl
   alias Torrex.Peer.Pool, as: PeerPool
+  alias Torrex.Peer.Worker, as: PeerWorker
+  alias Torrex.Listener
 
   @pstr "BitTorrent protocol"
-  @peer_limit 10
+  @peer_limit 25
   @peer_id Application.get_env(:torrex, :peer_id)
 
   @spec start_link(binary, pid, pid, pid) :: GenServer.on_start()
@@ -21,7 +23,7 @@ defmodule Torrex.Peer.Control do
   end
 
   def notify_saved(pid, index) do
-    GenServer.cast(pid, {:notify, index})
+    GenServer.cast(pid, {:saved, index})
   end
 
   def init([info_hash, control_pid, file_worker, sup_pid]) do
@@ -49,6 +51,7 @@ defmodule Torrex.Peer.Control do
         {:error, {:already_started, pid}} -> pid
       end
 
+    Listener.add_peer_pool(state.info_hash, pool_pid)
     Process.send_after(self(), :start_peers, 10_000)
 
     {:noreply, %{state | pool_pid: pool_pid}}
@@ -67,7 +70,10 @@ defmodule Torrex.Peer.Control do
     {:noreply, %{state | finding_peers: false, peers_left: peers_left}}
   end
 
-  def handle_cast({:notify, _index}, %{pool_pid: _pool_pid} = state) do
+  def handle_cast({:saved, index}, %{pool_pid: pool_pid} = state) do
+    PeerPool.get_children(pool_pid)
+    |> Enum.each(fn {_, pid, _, _} -> PeerWorker.notify_have(pid, index) end)
+
     {:noreply, state}
   end
 
@@ -161,7 +167,6 @@ defmodule Torrex.Peer.Control do
   end
 
   defp compose_handshake(info_hash) do
-    <<String.length(@pstr)::size(8), @pstr::bytes, 0::size(64), info_hash::bytes,
-      @peer_id::bytes>>
+    <<byte_size(@pstr)::size(8), @pstr::bytes, 0::size(64), info_hash::bytes, @peer_id::bytes>>
   end
 end
