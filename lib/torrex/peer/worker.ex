@@ -9,6 +9,7 @@ defmodule Torrex.Peer.Worker do
 
   alias Torrex.Torrent.Control, as: TorrentControl
   alias Torrex.FileIO.Worker, as: FileWorker
+  alias Torrex.TorrentTable
 
   def start_link(args) do
     GenServer.start_link(__MODULE__, args)
@@ -18,7 +19,7 @@ defmodule Torrex.Peer.Worker do
     GenServer.cast(pid, {:have, index})
   end
 
-  def init([socket, control_pid, file_worker]) do
+  def init([socket, control_pid, file_worker, info_hash]) do
     bitfield = TorrentControl.get_bitfield(control_pid)
     num_pieces = TorrentControl.get_num_pieces(control_pid)
 
@@ -26,6 +27,7 @@ defmodule Torrex.Peer.Worker do
       control_pid: control_pid,
       file_worker_pid: file_worker,
       socket: socket,
+      info_hash: info_hash,
       num_pieces: num_pieces,
       piece: {nil, nil, nil},
       status: :idle,
@@ -259,6 +261,7 @@ defmodule Torrex.Peer.Worker do
   """
   def handle_message(7, len, %{socket: socket, piece: {index, data, size}} = state) do
     with {:ok, <<^index::32, begin::32, block::binary>>} <- :gen_tcp.recv(socket, len) do
+      TorrentTable.downloaded(state.info_hash, byte_size(block))
       data = List.replace_at(data, div(begin, 16 * 1024), block)
       size = size - byte_size(block)
       {:downloading, %{state | piece: {index, data, size}}}

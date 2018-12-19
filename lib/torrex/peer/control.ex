@@ -141,14 +141,14 @@ defmodule Torrex.Peer.Control do
 
   defp parse_peers(<<>>, peers), do: peers
 
-  defp handshake({ip, port}, info_hash, pool_pid, control, file_worker) do
+  defp handshake({ip, port}, info_hash, pool_pid, ctrl, file_worker) do
     with {:ok, socket} <- :gen_tcp.connect(ip, port, [:binary, active: false]) do
       message = compose_handshake(info_hash)
       :gen_tcp.send(socket, message)
 
       with {:ok, _peer_id} <- complete_handshake(socket, info_hash),
-           {:ok, peer_worker} <- PeerPool.start_peer(pool_pid, socket, control, file_worker) do
-        :gen_tcp.controlling_process(socket, peer_worker)
+           {:ok, worker} <- PeerPool.start_peer(pool_pid, socket, ctrl, file_worker, info_hash) do
+        :gen_tcp.controlling_process(socket, worker)
       end
     end
   end

@@ -115,8 +115,14 @@ defmodule Torrex.Listener do
     message = compose_handshake(info_hash)
     :gen_tcp.send(socket, message)
 
-    {:ok, peer_worker} = PeerPool.start_peer(pool, socket, control, file)
-    :gen_tcp.controlling_process(socket, peer_worker)
+    case :gen_tcp.recv(socket, 20) do
+      {:ok, _peer_id} ->
+        {:ok, peer_worker} = PeerPool.start_peer(pool, socket, control, file, info_hash)
+        :gen_tcp.controlling_process(socket, peer_worker)
+
+      _ ->
+        :gen_tcp.close(socket)
+    end
   end
 
   defp compose_handshake(info_hash) do

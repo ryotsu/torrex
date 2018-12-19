@@ -148,6 +148,11 @@ defmodule Torrex.Tracker do
     HTTP.contact_tracker(self(), URI.to_string(uri), event, info_hash)
   end
 
+  @spec contact_tracker(URI.t(), atom, binary) :: :ok | :error
+  defp contact_tracker(%URI{scheme: "https"} = uri, event, info_hash) do
+    HTTP.contact_tracker(self(), URI.to_string(uri), event, info_hash)
+  end
+
   defp contact_tracker(%URI{scheme: "udp"} = uri, event, info_hash) do
     case uri.host |> to_charlist |> :inet.getaddr(:inet) do
       {:ok, ip} ->

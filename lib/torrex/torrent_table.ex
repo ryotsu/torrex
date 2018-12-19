@@ -56,6 +56,11 @@ defmodule Torrex.TorrentTable do
     GenServer.cast(__MODULE__, {:saved, info_hash, size})
   end
 
+  @spec downloaded(binary, non_neg_integer) :: :ok
+  def downloaded(info_hash, size) do
+    GenServer.cast(__MODULE__, {:downloaded, info_hash, size})
+  end
+
   def subscribe do
     GenServer.call(__MODULE__, :subscribe)
   end
@@ -150,22 +155,24 @@ defmodule Torrex.TorrentTable do
   end
 
   def handle_cast({:saved, info_hash, size}, %{torrents: torrents} = state) do
-    with {:ok, {pid, torrent}} <- find_torrent(state, info_hash, :noreply),
-         {:ok, [recent | rest]} <- find_download(state, info_hash) do
+    with {:ok, {pid, torrent}} <- find_torrent(state, info_hash, :noreply) do
       torrent = %Torrent{
         torrent
         | downloaded: torrent.downloaded + size,
           left: torrent.left - size
       }
 
-      state = %{
-        state
-        | torrents: %{torrents | info_hash => {pid, torrent}},
-          downloads: %{state.downloads | info_hash => [recent + size | rest]}
-      }
+      state = %{state | torrents: %{torrents | info_hash => {pid, torrent}}}
 
       notify_saved(size, info_hash, state)
 
+      {:noreply, state}
+    end
+  end
+
+  def handle_cast({:downloaded, info_hash, size}, state) do
+    with {:ok, [recent | rest]} <- find_download(state, info_hash) do
+      state = %{state | downloads: %{state.downloads | info_hash => [recent + size | rest]}}
       {:noreply, state}
     end
   end
