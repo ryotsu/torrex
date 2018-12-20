@@ -8,23 +8,23 @@ defmodule Torrex.Torrent.Supervisor do
     Supervisor.start_link(__MODULE__, info_hash, name: name)
   end
 
-  @spec start_peer_manager(binary, pid, pid, pid) :: Supervisor.on_start_child()
-  def start_peer_manager(info_hash, control_pid, file_worker, pid) do
+  @spec start_peer_manager(pid, binary, pid, pid) :: Supervisor.on_start_child()
+  def start_peer_manager(pid, info_hash, control_pid, file_worker) do
     child =
       supervisor(Torrex.Peer.Manager, [info_hash, control_pid, file_worker], restart: :transient)
 
     Supervisor.start_child(pid, child)
   end
 
-  @spec add_tracker(binary, pid, pid) :: Supervisor.on_start_child()
-  def add_tracker(info_hash, control_pid, pid) do
+  @spec add_tracker(pid, binary, pid) :: Supervisor.on_start_child()
+  def add_tracker(pid, info_hash, control_pid) do
     child = worker(Torrex.Tracker, [info_hash, control_pid], restart: :transient)
 
     Supervisor.start_child(pid, child)
   end
 
-  def start_file_worker(info_hash, control_pid, pid) do
-    child = worker(Torrex.FileIO.Worker, [info_hash, control_pid], restart: :transient)
+  def start_file_worker(pid, info_hash, bitfield, control_pid) do
+    child = worker(Torrex.FileIO.Worker, [info_hash, bitfield, control_pid], restart: :transient)
 
     Supervisor.start_child(pid, child)
   end

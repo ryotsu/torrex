@@ -26,6 +26,10 @@ defmodule Torrex.Peer.Control do
     GenServer.cast(pid, {:saved, index})
   end
 
+  def notify_cancel(pid, index) do
+    GenServer.cast(pid, {:cancel, index})
+  end
+
   def init([info_hash, control_pid, file_worker, sup_pid]) do
     state = %{
       info_hash: info_hash,
@@ -73,6 +77,13 @@ defmodule Torrex.Peer.Control do
   def handle_cast({:saved, index}, %{pool_pid: pool_pid} = state) do
     PeerPool.get_children(pool_pid)
     |> Enum.each(fn {_, pid, _, _} -> PeerWorker.notify_have(pid, index) end)
+
+    {:noreply, state}
+  end
+
+  def handle_cast({:cancel, index}, %{pool_pid: pool_pid} = state) do
+    PeerPool.get_children(pool_pid)
+    |> Enum.each(fn {_, pid, _, _} -> PeerWorker.notify_cancel(pid, index) end)
 
     {:noreply, state}
   end

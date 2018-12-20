@@ -19,6 +19,10 @@ defmodule Torrex.Peer.Worker do
     GenServer.cast(pid, {:have, index})
   end
 
+  def notify_cancel(pid, index) do
+    GenServer.cast(pid, {:cancel, index})
+  end
+
   def init([socket, control_pid, file_worker, info_hash]) do
     bitfield = TorrentControl.get_bitfield(control_pid)
     num_pieces = TorrentControl.get_num_pieces(control_pid)
@@ -60,6 +64,22 @@ defmodule Torrex.Peer.Worker do
 
   def handle_cast({:have, index}, state) do
     have(index, state)
+    {:noreply, state}
+  end
+
+  def handle_cast({:cancel, index}, %{piece: {index, data, left}} = state) do
+    size =
+      Enum.reduce(data, left, fn bin, total ->
+        if is_binary(bin), do: total + byte_size(bin), else: total
+      end)
+
+    data = make_cancel_data(index, 0, size)
+    :gen_tcp.send(state.socket, data)
+
+    {:noreply, %{state | piece: {nil, nil, nil}}}
+  end
+
+  def handle_cast({:cancel, _index}, state) do
     {:noreply, state}
   end
 
@@ -161,8 +181,20 @@ defmodule Torrex.Peer.Worker do
     :gen_tcp.send(socket, <<13::32, 8::8, index::32, begin::32, len::32>>)
   end
 
+  def make_cancel_data(index, begin, len, data \\ <<>>)
+
+  def make_cancel_data(_index, _begin, 0, data) do
+    data
+  end
+
+  def make_cancel_data(index, begin, len, data) do
+    req_len = min(len, 16 * 1024)
+    data = data <> <<13::32, 8::8, index::32, begin::32, req_len::32>>
+    make_cancel_data(index, begin + req_len, len - req_len, data)
+  end
+
   def receive_message(%{socket: socket} = state) do
-    case recieve_message(:gen_tcp.recv(socket, 4), socket) do
+    case recieve_message(:gen_tcp.recv(socket, 4, 1_000), socket) do
       {:ok, id, len} ->
         case handle_message(id, len, state) do
           {:ok, state} ->
@@ -181,6 +213,10 @@ defmodule Torrex.Peer.Worker do
         Process.send_after(self(), :next_tick, 0)
         {:noreply, state}
 
+      {:error, :timeout} ->
+        Process.send_after(self(), :next_tick, 100)
+        {:noreply, state}
+
       _message ->
         :gen_tcp.close(state.socket)
         {:stop, :normal, state}
@@ -195,6 +231,10 @@ defmodule Torrex.Peer.Worker do
     with {:ok, <<id::size(8)>>} <- :gen_tcp.recv(socket, 1) do
       {:ok, id, len - 1}
     end
+  end
+
+  def recieve_message({:error, :timeout}, _socket) do
+    {:error, :timeout}
   end
 
   def recieve_message(msg, _socket) do

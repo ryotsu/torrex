@@ -32,7 +32,8 @@ defmodule Torrex.Torrent.Control do
       tracker_pid: nil,
       bitfield: MapSet.new(),
       downloading: MapSet.new(),
-      status: :initializing
+      status: :initializing,
+      have: 0
     }
 
     {:ok, state, {:continue, :initialize}}
@@ -101,7 +102,7 @@ defmodule Torrex.Torrent.Control do
     {:reply, bitfield, state}
   end
 
-  def handle_call({:next_piece, peer_bitfield}, _from, %{bitfield: bitfield} = state) do
+  def handle_call({:next_piece, peer_bitfield}, {_tag, pid}, %{bitfield: bitfield} = state) do
     diff = MapSet.difference(peer_bitfield, bitfield) |> MapSet.difference(state.downloading)
 
     case diff |> Enum.take_random(1) do
@@ -112,7 +113,13 @@ defmodule Torrex.Torrent.Control do
         size =
           if index == state.num_pieces - 1, do: state.last_piece_length, else: state.piece_length
 
-        downloading = MapSet.put(state.downloading, index)
+        downloading =
+          if state.num_pieces - state.have <= 10 do
+            MapSet.new()
+          else
+            MapSet.put(state.downloading, index)
+          end
+
         {:reply, {:ok, index, size}, %{state | bitfield: bitfield, downloading: downloading}}
     end
   end
@@ -146,7 +153,11 @@ defmodule Torrex.Torrent.Control do
     bitfield = MapSet.put(bitfield, index)
     downloading = MapSet.delete(downloading, index)
 
-    {:noreply, %{state | bitfield: bitfield, downloading: downloading}}
+    if state.num_pieces - state.have <= 10 do
+      PeerControl.notify_cancel(state.peer_control_pid, index)
+    end
+
+    {:noreply, %{state | bitfield: bitfield, downloading: downloading, have: state.have + 1}}
   end
 
   def handle_cast(:find_peers, %{tracker_pid: pid} = state) do
@@ -164,18 +175,22 @@ defmodule Torrex.Torrent.Control do
   end
 
   def handle_info({ref, bitfield}, %{info_hash: info_hash, sup_pid: sup_pid} = state) do
-    {:ok, tracker_pid} = TorrentSupervisor.add_tracker(info_hash, self(), sup_pid)
-    {:ok, file_worker} = TorrentSupervisor.start_file_worker(info_hash, self(), sup_pid)
+    {:ok, tracker_pid} = TorrentSupervisor.add_tracker(sup_pid, info_hash, self())
+    {:ok, file_worker} = TorrentSupervisor.start_file_worker(sup_pid, info_hash, bitfield, self())
     Listener.add_torrent(info_hash, self(), file_worker)
 
+    have = MapSet.to_list(bitfield) |> length
+
     {:ok, _manager_pid} =
-      TorrentSupervisor.start_peer_manager(info_hash, self(), file_worker, sup_pid)
+      TorrentSupervisor.start_peer_manager(sup_pid, info_hash, self(), file_worker)
 
     TorrentTable.size_on_disk(info_hash, calculate_size_on_disk(bitfield, state))
     :ok = TorrentTable.release_check()
 
     Process.demonitor(ref)
-    {:noreply, %{state | bitfield: bitfield, status: :started, tracker_pid: tracker_pid}}
+    state = %{state | bitfield: bitfield, have: have, status: :started, tracker_pid: tracker_pid}
+
+    {:noreply, state}
   end
 
   def handle_info({:DOWN, ref, :process, _pid, _status}, state) do
