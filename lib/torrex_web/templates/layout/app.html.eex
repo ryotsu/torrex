@@ -11,7 +11,11 @@
     <nav class="navbar navbar-expand-md navbar-dark bg-dark mb-4 text-white">
       <a class="navbar-brand mr-auto">Torrex</a>
       <form class="form-inline">
-        <button id="add-torrent" class="btn btn-outline-light" type="button">Add Torrent</button>
+        <label for="add-torrent">
+          <div class="btn btn-outline-light">Add Torrent</div>
+          <input type="hidden" id="csrf-token" value="<%= @token %>">
+          <input type="file" id="add-torrent" name="torrent" accept=".torrent" style="display:none">
+        </label>
       </form>
     </nav>
     <%= render @view_module, @view_template, assigns %>
