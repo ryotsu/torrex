@@ -1,21 +1,11 @@
 # Torrex
 
-**TODO: Add description**
+A torrent client written in Elixir
 
-## Installation
+To start the server:
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `torrex` to your list of dependencies in `mix.exs`:
+  * Install dependencies with `mix deps.get`
+  * Install Node.js dependencies with `cd assets && npm install`
+  * Start Phoenix endpoint with `mix phx.server`
 
-```elixir
-def deps do
-  [
-    {:torrex, "~> 0.1.0"}
-  ]
-end
-```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/torrex](https://hexdocs.pm/torrex).
-
+Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
