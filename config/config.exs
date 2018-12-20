@@ -33,7 +33,7 @@ config :torrex,
   peer_id: :crypto.strong_rand_bytes(20) |> Base.url_encode64() |> binary_part(0, 20),
   tcp_port: 6885,
   udp_port: Enum.random(21_001..22_000),
-  download_dir: "/home/ryotsu/workspace/torrex/Downloads"
+  download_dir: System.get_env("HOME") |> Path.join("Downloads")
 
 config :torrex, TorrexWeb.Endpoint,
   url: [host: "localhost"],
