@@ -12,9 +12,13 @@ defmodule Torrex.FileIO.Utils do
   @spec check_torrent(binary) :: MapSet.t()
   def check_torrent(info_hash) do
     {:ok, torrent} = TorrentTable.get_torrent(info_hash)
-    true = ensure_torrent_paths(torrent.files) |> Enum.all?(&(&1 == :ok))
+    path_results = ensure_torrent_paths(torrent.files)
 
-    check_all_pieces(torrent.pieces)
+    if Enum.all?(path_results, &(&1 == false)) do
+      MapSet.new()
+    else
+      check_all_pieces(torrent.pieces)
+    end
   end
 
   @spec ensure_torrent_paths([{Path.t(), integer}]) :: [:ok]
@@ -29,6 +33,7 @@ defmodule Torrex.FileIO.Utils do
           :ok = :filelib.ensure_dir(path)
           :ok = File.touch(path)
           fill_file(path, length)
+          false
       end
     end
   end
