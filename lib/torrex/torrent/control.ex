@@ -102,7 +102,7 @@ defmodule Torrex.Torrent.Control do
     {:reply, bitfield, state}
   end
 
-  def handle_call({:next_piece, peer_bitfield}, {_tag, pid}, %{bitfield: bitfield} = state) do
+  def handle_call({:next_piece, peer_bitfield}, _from, %{bitfield: bitfield} = state) do
     diff = MapSet.difference(peer_bitfield, bitfield) |> MapSet.difference(state.downloading)
 
     case diff |> Enum.take_random(1) do
@@ -114,7 +114,7 @@ defmodule Torrex.Torrent.Control do
           if index == state.num_pieces - 1, do: state.last_piece_length, else: state.piece_length
 
         downloading =
-          if state.num_pieces - state.have <= 10 do
+          if state.num_pieces - state.have <= 20 do
             MapSet.new()
           else
             MapSet.put(state.downloading, index)
@@ -153,7 +153,7 @@ defmodule Torrex.Torrent.Control do
     bitfield = MapSet.put(bitfield, index)
     downloading = MapSet.delete(downloading, index)
 
-    if state.num_pieces - state.have <= 10 do
+    if state.num_pieces - state.have <= 20 do
       PeerControl.notify_cancel(state.peer_control_pid, index)
     end
 
