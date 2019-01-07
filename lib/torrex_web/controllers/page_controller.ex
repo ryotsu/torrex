@@ -6,8 +6,12 @@ defmodule TorrexWeb.PageController do
   end
 
   def add(conn, %{"torrent" => torrent}) do
-    success = Torrex.add_torrent(torrent.path)
+    case Torrex.add_torrent(torrent.path) do
+      {:error, reason} ->
+        render(conn, "add.json", %{success: reason, token: get_csrf_token()})
 
-    render(conn, "add.json", %{success: success, token: get_csrf_token()})
+      _ ->
+        render(conn, "add.json", %{success: :ok, token: get_csrf_token()})
+    end
   end
 end

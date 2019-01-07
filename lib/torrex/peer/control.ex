@@ -6,10 +6,11 @@ defmodule Torrex.Peer.Control do
   alias Torrex.Torrent.Control, as: TorrentControl
   alias Torrex.Peer.Pool, as: PeerPool
   alias Torrex.Peer.Worker, as: PeerWorker
+  alias Torrex.TorrentTable
   alias Torrex.Listener
 
   @pstr "BitTorrent protocol"
-  @peer_limit 25
+  @peer_limit 20
   @peer_id Application.get_env(:torrex, :peer_id)
 
   @spec start_link(binary, pid, pid, pid) :: GenServer.on_start()
@@ -88,12 +89,23 @@ defmodule Torrex.Peer.Control do
     {:noreply, state}
   end
 
-  def handle_info(:start_peers, %{pool_pid: pool_pid} = state) do
-    %{active: active} = PeerPool.count_children(pool_pid)
-    state = if active + state.queued < @peer_limit, do: start_peers(active, state), else: state
-    Process.send_after(self(), :start_peers, 10_000)
+  def handle_info(:start_peers, %{pool_pid: pool_pid, info_hash: info_hash} = state) do
+    {:ok, torrent} = TorrentTable.get_torrent(info_hash)
 
-    {:noreply, state}
+    case torrent.left do
+      0 ->
+        Process.send_after(self(), :start_peers, 10_000)
+        {:noreply, state}
+
+      _ ->
+        %{active: active} = PeerPool.count_children(pool_pid)
+
+        state =
+          if active + state.queued < @peer_limit, do: start_peers(active, state), else: state
+
+        Process.send_after(self(), :start_peers, 10_000)
+        {:noreply, state}
+    end
   end
 
   def handle_info(:find_peers, %{finding_peers: false, control_pid: pid} = state) do

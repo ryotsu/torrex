@@ -38,11 +38,11 @@ defmodule Torrex.Torrent do
          {:ok, info} <- Map.fetch(torrent, "info"),
          {:ok, name} <- Map.fetch(info, "name"),
          {:ok, pieces} <- Map.fetch(info, "pieces"),
-         {:ok, piece_length} <- Map.fetch(info, "piece length") do
+         {:ok, piece_length} <- Map.fetch(info, "piece length"),
+         {:ok, trackers} <- get_trackers(torrent) do
       download_dir = Application.get_env(:torrex, :download_dir)
       files = get_files(info, Path.join(download_dir, name))
       size = Enum.reduce(files, 0, fn {_name, length}, total -> length + total end)
-      trackers = get_trackers(torrent)
       piece_map = get_piece_map(piece_length, files, get_hashes(pieces))
       {:ok, bencoded_info} = Bento.encode(info)
       info_hash = :crypto.hash(:sha, bencoded_info)
@@ -74,9 +74,10 @@ defmodule Torrex.Torrent do
     [{name, length}]
   end
 
-  @spec get_trackers(map) :: [String.t()]
-  defp get_trackers(%{"announce-list" => announce_list}), do: List.flatten(announce_list)
-  defp get_trackers(%{"announce" => announce}), do: [announce]
+  @spec get_trackers(map) :: {:ok, [String.t()]} | {:error, term}
+  defp get_trackers(%{"announce-list" => announce_list}), do: {:ok, List.flatten(announce_list)}
+  defp get_trackers(%{"announce" => announce}), do: {:ok, [announce]}
+  defp get_trackers(_), do: {:error, :no_trackers}
 
   @spec get_hashes(binary, non_neg_integer, map) :: map
   defp get_hashes(hash, num \\ 0, acc \\ %{})
