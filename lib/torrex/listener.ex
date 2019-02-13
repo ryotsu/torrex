@@ -12,18 +12,22 @@ defmodule Torrex.Listener do
   @pstr "BitTorrent protocol"
   @peer_id Application.get_env(:torrex, :peer_id)
 
+  @spec start_link(number) :: GenServer.on_start()
   def start_link(port) do
     GenServer.start_link(__MODULE__, port, name: __MODULE__)
   end
 
+  @spec add_torrent(binary, pid, pid) :: :ok
   def add_torrent(info_hash, control_pid, file_worker) do
     GenServer.cast(__MODULE__, {:add_torrent, info_hash, control_pid, file_worker})
   end
 
+  @spec add_peer_pool(binary, pid) :: :ok
   def add_peer_pool(info_hash, peer_pool) do
     GenServer.cast(__MODULE__, {:add_peer_pool, info_hash, peer_pool})
   end
 
+  @impl true
   def init(port) do
     {:ok, listen} = :gen_tcp.listen(port, [:binary, active: false])
 
@@ -37,6 +41,7 @@ defmodule Torrex.Listener do
     {:ok, state}
   end
 
+  @impl true
   def handle_cast({:add_torrent, info_hash, control_pid, file_worker}, %{torrents: t} = state) do
     peer_pool = Map.get(t, info_hash) |> (fn i -> if i == nil, do: nil, else: i.peer_pool end).()
 
@@ -51,6 +56,7 @@ defmodule Torrex.Listener do
     {:noreply, %{state | torrents: torrents}}
   end
 
+  @impl true
   def handle_cast({:add_peer_pool, info_hash, peer_pool}, %{torrents: torrents} = state) do
     torrents =
       case Map.fetch(torrents, info_hash) do
@@ -61,6 +67,7 @@ defmodule Torrex.Listener do
     {:noreply, %{state | torrents: torrents}}
   end
 
+  @impl true
   def handle_info(:accept, %{listen: listen, torrents: torrents} = state) do
     case :gen_tcp.accept(listen, 2_000) do
       {:ok, socket} ->
@@ -74,17 +81,20 @@ defmodule Torrex.Listener do
     {:noreply, state}
   end
 
+  @impl true
   def handle_info({ref, _result}, state) do
     Process.demonitor(ref)
     {:noreply, state}
   end
 
+  @impl true
   def handle_info({:DOWN, ref, :process, _pid, _status}, state) do
     Process.demonitor(ref)
     {:noreply, state}
   end
 
-  defp handshake(socket, torrents) do
+  @spec handshake(port, map) :: :ok
+  defp(handshake(socket, torrents)) do
     case recieve_handshake(socket) do
       {:ok, info_hash} ->
         if Map.has_key?(torrents, info_hash) do
@@ -98,6 +108,7 @@ defmodule Torrex.Listener do
     end
   end
 
+  @spec recieve_handshake(port) :: {:ok, binary} | :error | {:error, term}
   defp recieve_handshake(socket) do
     with {:ok, <<len::size(8)>>} <- :gen_tcp.recv(socket, 1),
          {:ok, pstr} <- :gen_tcp.recv(socket, len),
@@ -110,6 +121,7 @@ defmodule Torrex.Listener do
     end
   end
 
+  @spec complete_handshake(port, binary, map) :: :ok
   defp complete_handshake(socket, info_hash, torrents) do
     %{peer_pool: pool, control_pid: control, file_worker: file} = Map.get(torrents, info_hash)
     message = compose_handshake(info_hash)
@@ -125,6 +137,7 @@ defmodule Torrex.Listener do
     end
   end
 
+  @spec compose_handshake(binary) :: binary
   defp compose_handshake(info_hash) do
     <<byte_size(@pstr)::size(8), @pstr::bytes, 0::size(64), info_hash::bytes, @peer_id::bytes>>
   end

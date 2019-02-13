@@ -28,18 +28,22 @@ defmodule Torrex.Tracker.HTTP do
     GenServer.cast(__MODULE__, {:contact, pid, url, event, info_hash})
   end
 
+  @impl true
   def init([peer_id, port]) do
     {:ok, %{tracker_ids: %{}, peer_id: peer_id, port: port}}
   end
 
+  @impl true
   def handle_call({:get_id, url}, _from, %{tracker_ids: ids} = state) do
     {:reply, Map.fetch(ids, url), state}
   end
 
+  @impl true
   def handle_cast({:store_id, url, tracker_id}, %{tracker_ids: ids} = state) do
     {:noreply, %{state | tracker_ids: Map.put(ids, url, tracker_id)}}
   end
 
+  @impl true
   def handle_cast({:contact, pid, url, event, info_hash}, state) do
     spawn_link(__MODULE__, :make_request, [pid, url, event, info_hash, state.peer_id, state.port])
     {:noreply, state}

@@ -11,14 +11,17 @@ defmodule Torrex.FileIO.Worker do
   alias Torrex.Torrent.Control, as: TorrentControl
   alias Torrex.FileIO.Utils, as: FileUtils
 
+  @spec start_link(binary, MapSet.t(), pid) :: GenServer.on_start()
   def start_link(info_hash, bitfield, control_pid) do
     GenServer.start_link(__MODULE__, [info_hash, bitfield, control_pid])
   end
 
+  @spec save_piece(pid, number, binary) :: :ok
   def save_piece(pid, index, piece) do
     GenServer.cast(pid, {:save_piece, index, piece})
   end
 
+  @impl true
   def init([info_hash, bitfield, control_pid]) do
     {:ok, torrent} = TorrentTable.get_torrent(info_hash)
 
@@ -34,6 +37,7 @@ defmodule Torrex.FileIO.Worker do
     {:ok, state}
   end
 
+  @impl true
   def handle_cast({:save_piece, index, piece}, %{bitfield: bitfield} = state) do
     case index in bitfield do
       true -> {:noreply, state}
@@ -41,6 +45,7 @@ defmodule Torrex.FileIO.Worker do
     end
   end
 
+  @spec write_piece(number, binary, map) :: {:noreply, map}
   defp write_piece(index, piece, %{pieces: pieces, info_hash: info_hash} = state) do
     {hash, piece_info} = Map.get(pieces, index)
 

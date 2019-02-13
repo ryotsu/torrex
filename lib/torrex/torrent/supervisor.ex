@@ -23,12 +23,14 @@ defmodule Torrex.Torrent.Supervisor do
     Supervisor.start_child(pid, child)
   end
 
+  @spec start_file_worker(pid, binary, MapSet.t(), pid) :: Supervisor.on_start_child()
   def start_file_worker(pid, info_hash, bitfield, control_pid) do
     child = worker(Torrex.FileIO.Worker, [info_hash, bitfield, control_pid], restart: :transient)
 
     Supervisor.start_child(pid, child)
   end
 
+  @impl true
   def init(info_hash) do
     children = [
       worker(Torrex.Torrent.Control, [self(), info_hash], restart: :transient)

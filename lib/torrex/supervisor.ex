@@ -5,10 +5,12 @@ defmodule Torrex.Supervisor do
 
   use Supervisor
 
+  @spec start_link(list) :: Supervisor.on_start()
   def start_link(args) do
     Supervisor.start_link(__MODULE__, args, name: __MODULE__)
   end
 
+  @impl true
   def init([peer_id, tcp_port, udp_port]) do
     children = [
       supervisor(Torrex.Torrent.Pool, []),

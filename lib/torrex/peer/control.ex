@@ -23,14 +23,17 @@ defmodule Torrex.Peer.Control do
     GenServer.cast(pid, {:add_peers, peers})
   end
 
+  @spec notify_saved(pid, non_neg_integer) :: :ok
   def notify_saved(pid, index) do
     GenServer.cast(pid, {:saved, index})
   end
 
+  @spec notify_cancel(pid, non_neg_integer) :: :ok
   def notify_cancel(pid, index) do
     GenServer.cast(pid, {:cancel, index})
   end
 
+  @impl true
   def init([info_hash, control_pid, file_worker, sup_pid]) do
     state = %{
       info_hash: info_hash,
@@ -47,6 +50,7 @@ defmodule Torrex.Peer.Control do
     {:ok, state, {:continue, :init}}
   end
 
+  @impl true
   def handle_continue(:init, %{control_pid: control_pid, manager_pid: man_pid} = state) do
     :ok = TorrentControl.add_peer_control_pid(control_pid, self())
 
@@ -62,6 +66,7 @@ defmodule Torrex.Peer.Control do
     {:noreply, %{state | pool_pid: pool_pid}}
   end
 
+  @impl true
   def handle_cast({:add_peers, peers}, %{peers_left: left, peers_used: used} = state) do
     peers_left =
       peers
@@ -75,6 +80,7 @@ defmodule Torrex.Peer.Control do
     {:noreply, %{state | finding_peers: false, peers_left: peers_left}}
   end
 
+  @impl true
   def handle_cast({:saved, index}, %{pool_pid: pool_pid} = state) do
     PeerPool.get_children(pool_pid)
     |> Enum.each(fn {_, pid, _, _} -> PeerWorker.notify_have(pid, index) end)
@@ -82,6 +88,7 @@ defmodule Torrex.Peer.Control do
     {:noreply, state}
   end
 
+  @impl true
   def handle_cast({:cancel, index}, %{pool_pid: pool_pid} = state) do
     PeerPool.get_children(pool_pid)
     |> Enum.each(fn {_, pid, _, _} -> PeerWorker.notify_cancel(pid, index) end)
@@ -89,6 +96,7 @@ defmodule Torrex.Peer.Control do
     {:noreply, state}
   end
 
+  @impl true
   def handle_info(:start_peers, %{pool_pid: pool_pid, info_hash: info_hash} = state) do
     {:ok, torrent} = TorrentTable.get_torrent(info_hash)
 
@@ -108,6 +116,7 @@ defmodule Torrex.Peer.Control do
     end
   end
 
+  @impl true
   def handle_info(:find_peers, %{finding_peers: false, control_pid: pid} = state) do
     state =
       if MapSet.equal?(state.peers_left, MapSet.new()) do
@@ -122,20 +131,24 @@ defmodule Torrex.Peer.Control do
     {:noreply, state}
   end
 
+  @impl true
   def handle_info(:find_peers, state) do
     {:noreply, state}
   end
 
+  @impl true
   def handle_info({ref, _result}, %{queued: queued} = state) do
     Process.demonitor(ref)
     {:noreply, %{state | queued: queued - 1}}
   end
 
+  @impl true
   def handle_info({:DOWN, ref, :process, _pid, _status}, state) do
     Process.demonitor(ref)
     {:noreply, state}
   end
 
+  @spec start_peers(non_neg_integer, map) :: map
   defp start_peers(active, %{peers_left: left, peers_used: used, pool_pid: pid} = state) do
     peers =
       left
@@ -164,6 +177,8 @@ defmodule Torrex.Peer.Control do
 
   defp parse_peers(<<>>, peers), do: peers
 
+  @type addr :: {{integer, integer, integer, integer}, integer}
+  @spec handshake(addr, binary, pid, pid, pid) :: :ok | :error | {:error, term}
   defp handshake({ip, port}, info_hash, pool_pid, ctrl, file_worker) do
     with {:ok, socket} <- :gen_tcp.connect(ip, port, [:binary, active: false]) do
       message = compose_handshake(info_hash)
@@ -176,6 +191,7 @@ defmodule Torrex.Peer.Control do
     end
   end
 
+  @spec complete_handshake(port, binary) :: {:ok, binary} | :error | {:error, term}
   defp complete_handshake(socket, info_hash) do
     with {:ok, <<len::size(8)>>} <- :gen_tcp.recv(socket, 1),
          {:ok, pstr} <- :gen_tcp.recv(socket, len),
@@ -189,6 +205,7 @@ defmodule Torrex.Peer.Control do
     end
   end
 
+  @spec compose_handshake(binary) :: binary
   defp compose_handshake(info_hash) do
     <<byte_size(@pstr)::size(8), @pstr::bytes, 0::size(64), info_hash::bytes, @peer_id::bytes>>
   end

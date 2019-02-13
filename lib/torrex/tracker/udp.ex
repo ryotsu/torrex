@@ -27,11 +27,13 @@ defmodule Torrex.Tracker.UDP do
     GenServer.cast(__MODULE__, {:contact, pid, ip, port, event, info_hash})
   end
 
+  @impl true
   def init([peer_id, tcp_port, udp_port]) do
     {:ok, socket} = :gen_udp.open(udp_port, [:binary, active: true])
     {:ok, %{connections: %{}, timers: %{}, peer_id: peer_id, port: tcp_port, socket: socket}}
   end
 
+  @impl true
   def handle_cast({:contact, pid, ip, port, event, info_hash}, state) do
     transaction_id = :crypto.strong_rand_bytes(4)
 
@@ -43,10 +45,12 @@ defmodule Torrex.Tracker.UDP do
     {:noreply, %{state | connections: connections}}
   end
 
+  @impl true
   def handle_cast(_msg, state) do
     {:noreply, state}
   end
 
+  @impl true
   def handle_info({:udp, _socket, ip, port, <<0::size(32), response::binary>>}, state) do
     <<transaction_id::bytes-size(4), connection_id::bytes-size(8)>> = response
 
@@ -64,6 +68,7 @@ defmodule Torrex.Tracker.UDP do
     end
   end
 
+  @impl true
   def handle_info({:udp, _, _, _, <<1::size(32), tid::bytes-size(4), resp::binary>>}, state) do
     case Map.pop(state.connections, tid) do
       {{_info_hash, pid, _event, _addr, _status}, connections} ->
@@ -76,6 +81,7 @@ defmodule Torrex.Tracker.UDP do
     end
   end
 
+  @impl true
   def handle_info({transaction_id, 3}, %{connections: connections, timers: timers} = state) do
     {{_info_hash, pid, _event, _addr, _sts}, connections} = Map.pop(connections, transaction_id)
     timers = Map.delete(timers, transaction_id)
@@ -84,6 +90,7 @@ defmodule Torrex.Tracker.UDP do
     {:noreply, %{state | connections: connections, timers: timers}}
   end
 
+  @impl true
   def handle_info({transaction_id, count}, %{connections: conns} = state) do
     state = cancel_timeout(state, transaction_id)
     t_id = :crypto.strong_rand_bytes(4)
@@ -105,6 +112,7 @@ defmodule Torrex.Tracker.UDP do
     end
   end
 
+  @spec handle_success_response(binary, pid) :: :ok
   defp handle_success_response(response, pid) do
     <<interval::size(32), leachers::size(32), seeders::size(32), peers::binary>> = response
 

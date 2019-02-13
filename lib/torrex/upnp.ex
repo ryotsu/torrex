@@ -20,16 +20,19 @@ defmodule Torrex.UPnP do
     GenServer.start_link(__MODULE__, port, name: __MODULE__)
   end
 
+  @impl true
   def init(port) do
     {:ok, port, {:continue, :init}}
   end
 
+  @impl true
   def handle_continue(:init, port) do
     {:ok, socket} = :gen_udp.open(0, [:binary, active: false])
     Process.send_after(self(), :remap, 0)
     {:noreply, {port, socket}}
   end
 
+  @impl true
   def handle_info(:remap, {port, socket}) do
     case map_port(port, socket) do
       {:ok, %HTTPoison.Response{status_code: 200}} ->

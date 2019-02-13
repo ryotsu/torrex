@@ -3,7 +3,11 @@ defmodule Torrex.TorrentTable do
   Stores data about torrents and manages addition/deletion
   """
 
-  # @dialyzer {:no_match, handle_call: 3}
+  @dialyzer [
+    {:no_match, handle_call: 3},
+    {:no_unused, notify_added: 2},
+    {:no_unused, make_torrent_payload: 1}
+  ]
 
   use GenServer
 
@@ -61,10 +65,12 @@ defmodule Torrex.TorrentTable do
     GenServer.cast(__MODULE__, {:downloaded, info_hash, size})
   end
 
+  @spec subscribe :: :ok
   def subscribe do
     GenServer.call(__MODULE__, :subscribe)
   end
 
+  @impl true
   def init(peer_id) do
     state = %{
       torrents: %{},
@@ -79,6 +85,7 @@ defmodule Torrex.TorrentTable do
     {:ok, state}
   end
 
+  @impl true
   def handle_call({:add, path}, _from, %{torrents: torrents, downloads: downloads} = state) do
     case Torrex.Torrent.parse_file(path) do
       {:ok, torrent} ->
@@ -103,34 +110,41 @@ defmodule Torrex.TorrentTable do
     end
   end
 
+  @impl true
   def handle_call({:get, info_hash}, _from, state) do
     with {:ok, {_pid, torrent}} <- find_torrent(state, info_hash) do
       {:reply, {:ok, torrent}, state}
     end
   end
 
+  @impl true
   def handle_call({:get_trackers, info_hash}, _from, state) do
     with {:ok, {_pid, torrent}} <- find_torrent(state, info_hash) do
       {:reply, {:ok, torrent.trackers}, state}
     end
   end
 
+  @impl true
   def handle_call(:check, _from, %{check_acquired: {true, _pid}} = state) do
     {:reply, :error, state}
   end
 
+  @impl true
   def handle_call(:check, {pid, _ref}, %{check_acquired: false} = state) do
     {:reply, :ok, %{state | check_acquired: {true, pid}}}
   end
 
+  @impl true
   def handle_call(:release_check, {pid, _ref}, %{check_acquired: {true, pid}} = state) do
     {:reply, :ok, %{state | check_acquired: false}}
   end
 
+  @impl true
   def handle_call(:release_check, _from, state) do
     {:reply, :ok, state}
   end
 
+  @impl true
   def handle_call({:num_pieces, info_hash}, _from, state) do
     with {:ok, {_pid, torrent}} <- find_torrent(state, info_hash) do
       pieces = (torrent.size / torrent.piece_length) |> :math.ceil() |> trunc
@@ -138,6 +152,7 @@ defmodule Torrex.TorrentTable do
     end
   end
 
+  @impl true
   def handle_call(:subscribe, {pid, _tag}, %{subscribers: subs} = state) do
     ref = Process.monitor(pid)
     subs = Map.put(subs, ref, pid)
@@ -145,6 +160,7 @@ defmodule Torrex.TorrentTable do
     {:reply, make_init_payload(state), %{state | subscribers: subs}}
   end
 
+  @impl true
   def handle_cast({:size_on_disk, info_hash, size}, %{torrents: torrents} = state) do
     with {:ok, {pid, torrent}} <- find_torrent(state, info_hash, :noreply) do
       torrent = %Torrent{torrent | left: torrent.size - size}
@@ -154,6 +170,7 @@ defmodule Torrex.TorrentTable do
     end
   end
 
+  @impl true
   def handle_cast({:saved, info_hash, size}, %{torrents: torrents} = state) do
     with {:ok, {pid, torrent}} <- find_torrent(state, info_hash, :noreply) do
       torrent = %Torrent{
@@ -170,6 +187,7 @@ defmodule Torrex.TorrentTable do
     end
   end
 
+  @impl true
   def handle_cast({:downloaded, info_hash, size}, state) do
     with {:ok, [recent | rest]} <- find_download(state, info_hash) do
       state = %{state | downloads: %{state.downloads | info_hash => [recent + size | rest]}}
@@ -177,6 +195,7 @@ defmodule Torrex.TorrentTable do
     end
   end
 
+  @impl true
   def handle_info(:send_update, state) do
     state = notify_speed(state)
     Process.send_after(self(), :send_update, 1_000)
@@ -184,12 +203,15 @@ defmodule Torrex.TorrentTable do
     {:noreply, state}
   end
 
+  @impl true
   def handle_info({:DOWN, ref, :process, _pid, _reason}, %{subscribers: subs} = state) do
     Process.demonitor(ref)
     subs = Map.delete(subs, ref)
     {:noreply, %{state | subscribers: subs}}
   end
 
+  @spec find_torrent(map, binary, atom) ::
+          {:ok, {pid, Torrent.t()}} | {:reply, :error, map} | {:noreply, map}
   defp find_torrent(%{torrents: torrents} = state, info_hash, reply \\ :reply) do
     case Map.fetch(torrents, info_hash) do
       {:ok, torrent} ->
@@ -203,6 +225,7 @@ defmodule Torrex.TorrentTable do
     end
   end
 
+  @spec find_download(map, binary) :: {:ok, list} | {:noreply, map}
   defp find_download(%{downloads: downloads} = state, info_hash) do
     case Map.fetch(downloads, info_hash) do
       {:ok, result} -> {:ok, result}
@@ -210,12 +233,14 @@ defmodule Torrex.TorrentTable do
     end
   end
 
+  @spec notify_saved(non_neg_integer, binary, map) :: [:ok]
   defp notify_saved(size, info_hash, %{subscribers: subs}) do
     for {_ref, pid} <- subs do
       send(pid, {:saved, %{info_hash => size}})
     end
   end
 
+  @spec notify_speed(map) :: map
   defp notify_speed(%{subscribers: subs, downloads: downloads} = state) do
     payload = calc_download_speed(downloads)
 
@@ -231,6 +256,7 @@ defmodule Torrex.TorrentTable do
     %{state | downloads: downloads}
   end
 
+  @spec notify_added(Torrent.t(), map) :: [:ok]
   defp notify_added(torrent, %{subscribers: subs}) do
     payload = make_torrent_payload(torrent)
 
@@ -239,6 +265,7 @@ defmodule Torrex.TorrentTable do
     end
   end
 
+  @spec notify_left(non_neg_integer, binary, map) :: [:ok]
   defp notify_left(size, info_hash, %{subscribers: subs}) do
     payload = %{info_hash => size}
 
@@ -247,6 +274,7 @@ defmodule Torrex.TorrentTable do
     end
   end
 
+  @spec make_torrent_payload(Torrent.t()) :: map
   defp make_torrent_payload(torrent) do
     %{
       torrent.info_hash => %{
@@ -260,12 +288,14 @@ defmodule Torrex.TorrentTable do
     }
   end
 
+  @spec calc_download_speed(map) :: map
   defp calc_download_speed(downloads) do
     downloads
     |> Enum.map(fn {info_hash, data} -> {info_hash, Enum.sum(data) / 5} end)
     |> Enum.into(%{})
   end
 
+  @spec make_init_payload(map) :: map
   defp make_init_payload(%{torrents: torrents, downloads: downloads}) do
     downloads
     |> calc_download_speed

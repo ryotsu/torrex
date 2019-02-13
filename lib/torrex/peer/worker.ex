@@ -11,18 +11,22 @@ defmodule Torrex.Peer.Worker do
   alias Torrex.FileIO.Worker, as: FileWorker
   alias Torrex.TorrentTable
 
+  @spec start_link(list) :: GenServer.on_start()
   def start_link(args) do
     GenServer.start_link(__MODULE__, args)
   end
 
+  @spec notify_have(pid, non_neg_integer) :: :ok
   def notify_have(pid, index) do
     GenServer.cast(pid, {:have, index})
   end
 
+  @spec notify_cancel(pid, non_neg_integer) :: :ok
   def notify_cancel(pid, index) do
     GenServer.cast(pid, {:cancel, index})
   end
 
+  @impl true
   def init([socket, control_pid, file_worker, info_hash]) do
     bitfield = TorrentControl.get_bitfield(control_pid)
     num_pieces = TorrentControl.get_num_pieces(control_pid)
@@ -46,11 +50,13 @@ defmodule Torrex.Peer.Worker do
     {:ok, peer_state, {:continue, :post_handshake}}
   end
 
+  @impl true
   def handle_continue(:post_handshake, state) do
     bitfield(state)
     receive_message(state)
   end
 
+  @impl true
   def handle_continue(:downloading, %{piece: {index, data, 0}} = state) do
     FileWorker.save_piece(state.file_worker_pid, index, IO.iodata_to_binary(data))
     state = %{state | status: :idle, piece: {nil, nil, nil}}
@@ -58,15 +64,18 @@ defmodule Torrex.Peer.Worker do
     {:noreply, state}
   end
 
+  @impl true
   def handle_continue(:downloading, state) do
     receive_message(state)
   end
 
+  @impl true
   def handle_cast({:have, index}, state) do
     have(index, state)
     {:noreply, state}
   end
 
+  @impl true
   def handle_cast({:cancel, index}, %{piece: {index, data, left}} = state) do
     size =
       Enum.reduce(data, left, fn bin, total ->
@@ -79,15 +88,18 @@ defmodule Torrex.Peer.Worker do
     {:noreply, %{state | piece: {nil, nil, nil}}}
   end
 
+  @impl true
   def handle_cast({:cancel, _index}, state) do
     {:noreply, state}
   end
 
+  @impl true
   def handle_info(:next_tick, %{status: :idle, am_interested: false} = state) do
     state = interested(state)
     receive_message(state)
   end
 
+  @impl true
   def handle_info(:next_tick, %{status: :idle, am_interested: true, peer_choking: false} = st) do
     case TorrentControl.next_piece(st.control_pid, st.peer_bitfield) do
       {:ok, index, size} ->
@@ -100,105 +112,123 @@ defmodule Torrex.Peer.Worker do
     end
   end
 
+  @impl true
   def handle_info(:next_tick, %{status: :downloading, peer_choking: false} = state) do
     {:noreply, state, {:continue, :downloading}}
   end
 
+  @impl true
   def handle_info(:next_tick, state) do
     receive_message(state)
   end
 
+  @impl true
   def handle_info({:have, index}, state) do
     have(index, state)
     {:noreply, state}
   end
 
+  @impl true
   def terminate(_reason, %{piece: {index, _, _}, control_pid: pid}) do
     TorrentControl.failed_piece(pid, index)
     :ok
   end
 
+  @impl true
   def terminate(_reason, _state) do
     :ok
   end
 
-  def keep_alive(%{socket: socket}) do
+  @spec keep_alive(map) :: :ok
+  defp keep_alive(%{socket: socket}) do
     :gen_tcp.send(socket, <<0::size(32)>>)
   end
 
-  def choke(%{socket: socket} = state) do
+  @spec choke(map) :: map
+  defp choke(%{socket: socket} = state) do
     :gen_tcp.send(socket, <<1::size(32), 0::size(8)>>)
     %{state | am_choking: true}
   end
 
-  def unchoke(%{socket: socket} = state) do
+  @spec unchoke(map) :: map
+  defp unchoke(%{socket: socket} = state) do
     :gen_tcp.send(socket, <<1::size(32), 1::size(8)>>)
     %{state | am_choking: false}
   end
 
-  def interested(%{socket: socket} = state) do
+  @spec interested(map) :: map
+  defp interested(%{socket: socket} = state) do
     :gen_tcp.send(socket, <<1::size(32), 2::size(8)>>)
     %{state | am_interested: true}
   end
 
-  def not_interested(%{socket: socket} = state) do
+  @spec not_interested(map) :: map
+  defp not_interested(%{socket: socket} = state) do
     :gen_tcp.send(socket, <<1::size(32), 3::size(8)>>)
     %{state | am_interested: false}
   end
 
-  def have(index, %{socket: socket}) do
+  @spec have(non_neg_integer, map) :: :ok
+  defp have(index, %{socket: socket}) do
     :gen_tcp.send(socket, <<5::size(32), 4::size(8), index::size(32)>>)
   end
 
-  def have(index, state) do
-    Logger.debug("#{index}: #{inspect(state)}")
-  end
+  # def have(index, state) do
+  #   Logger.debug("#{index}: #{inspect(state)}")
+  # end
 
-  def bitfield(%{socket: socket, am_bitfield: bitfield} = state) do
+  @spec bitfield(map) :: :ok
+  defp bitfield(%{socket: socket, am_bitfield: bitfield} = state) do
     bitfield = make_bitfield(bitfield, state.num_pieces)
     :gen_tcp.send(socket, <<1 + byte_size(bitfield)::size(32), 5::size(8), bitfield::binary>>)
   end
 
-  def request(index, begin, len, %{socket: socket}) do
+  @spec request(non_neg_integer, non_neg_integer, non_neg_integer, map) :: :ok
+  defp request(index, begin, len, %{socket: socket}) do
     request_data = make_request_data(index, begin, len)
     :gen_tcp.send(socket, request_data)
   end
 
-  def make_request_data(index, begin, len, data \\ <<>>)
+  @spec make_request_data(non_neg_integer, non_neg_integer, non_neg_integer, binary) :: binary
+  defp make_request_data(index, begin, len, data \\ <<>>)
 
-  def make_request_data(_index, _begin, 0, data) do
+  defp make_request_data(_index, _begin, 0, data) do
     data
   end
 
-  def make_request_data(index, begin, len, data) do
+  defp make_request_data(index, begin, len, data) do
     req_len = min(len, 16 * 1024)
     data = data <> <<13::32, 6::8, index::32, begin::32, req_len::32>>
     make_request_data(index, begin + req_len, len - req_len, data)
   end
 
-  def piece(index, begin, block, %{socket: socket, requested: requested} = state) do
+  @spec piece(non_neg_integer, non_neg_integer, binary, map) :: map
+  defp piece(index, begin, block, %{socket: socket, requested: requested} = state) do
     :gen_tcp.send(socket, <<9 + byte_size(block)::32, 7::8, index::32, begin::32, block::binary>>)
     %{state | requested: MapSet.delete(requested, {index, begin, byte_size(block)})}
   end
 
-  def cancel(index, begin, len, %{socket: socket}) do
+  @spec cancel(non_neg_integer, non_neg_integer, non_neg_integer, map) :: :ok
+  defp cancel(index, begin, len, %{socket: socket}) do
     :gen_tcp.send(socket, <<13::32, 8::8, index::32, begin::32, len::32>>)
   end
 
-  def make_cancel_data(index, begin, len, data \\ <<>>)
+  @spec make_cancel_data(non_neg_integer, non_neg_integer, non_neg_integer, binary) :: binary
+  defp make_cancel_data(index, begin, len, data \\ <<>>)
 
-  def make_cancel_data(_index, _begin, 0, data) do
+  defp make_cancel_data(_index, _begin, 0, data) do
     data
   end
 
-  def make_cancel_data(index, begin, len, data) do
+  defp make_cancel_data(index, begin, len, data) do
     req_len = min(len, 16 * 1024)
     data = data <> <<13::32, 8::8, index::32, begin::32, req_len::32>>
     make_cancel_data(index, begin + req_len, len - req_len, data)
   end
 
-  def receive_message(%{socket: socket} = state) do
-    case recieve_message(:gen_tcp.recv(socket, 4, 1_000), socket) do
+  @spec receive_message(map) :: {:noreply, map} | {:stop, :normal, map}
+  defp receive_message(%{socket: socket} = state) do
+    case receive_msg(:gen_tcp.recv(socket, 4, 1_000), socket) do
       {:ok, id, len} ->
         case handle_message(id, len, state) do
           {:ok, state} ->
@@ -221,89 +251,77 @@ defmodule Torrex.Peer.Worker do
         Process.send_after(self(), :next_tick, 100)
         {:noreply, state}
 
-      _message ->
+      {:error, :closed} ->
         :gen_tcp.close(state.socket)
         {:stop, :normal, state}
     end
   end
 
-  def recieve_message({:ok, <<0::size(32)>>}, _) do
+  @spec receive_msg({:ok, binary} | {:error, :timeout}, port) ::
+          {:ok, non_neg_integer, non_neg_integer} | :keep_alive | {:error, term}
+  defp receive_msg({:ok, <<0::size(32)>>}, _) do
     :keep_alive
   end
 
-  def recieve_message({:ok, <<len::size(32)>>}, socket) do
+  defp receive_msg({:ok, <<len::size(32)>>}, socket) do
     with {:ok, <<id::size(8)>>} <- :gen_tcp.recv(socket, 1) do
       {:ok, id, len - 1}
     end
   end
 
-  def recieve_message({:error, :timeout}, _socket) do
+  defp receive_msg({:error, :timeout}, _socket) do
     {:error, :timeout}
   end
 
-  def recieve_message(msg, _socket) do
+  defp receive_msg(msg, _socket) do
     msg
   end
 
-  @doc """
-  Handles choke
-  """
-  def handle_message(0, _, state) do
+  # Handles choke
+  @spec handle_message(non_neg_integer, non_neg_integer, map) ::
+          {:ok, :normal, map} | {:ok, map} | {:downloading, map}
+  defp handle_message(0, _, state) do
     {:ok, :normal, %{state | peer_choking: true}}
   end
 
-  @doc """
-  Handles unchoke
-  """
-  def handle_message(1, _, state) do
+  # Handles unchoke
+  defp handle_message(1, _, state) do
     {:ok, %{state | peer_choking: false}}
   end
 
-  @doc """
-  Handles interested
-  """
-  def handle_message(2, _, %{status: _status} = state) do
+  # Handles interested
+  defp handle_message(2, _, %{status: _status} = state) do
     {:ok, %{state | peer_interested: true}}
   end
 
-  @doc """
-  Handles not interested
-  """
-  def handle_message(3, _, %{status: _status} = state) do
+  # Handles not interested
+  defp handle_message(3, _, %{status: _status} = state) do
     {:ok, %{state | peer_interested: false}}
   end
 
-  @doc """
-  Handles have
-  """
-  def handle_message(4, _, %{socket: socket, peer_bitfield: peer_bitfield} = state) do
+  # Handles have
+  defp handle_message(4, _, %{socket: socket, peer_bitfield: peer_bitfield} = state) do
     with {:ok, <<index::size(32)>>} <- :gen_tcp.recv(socket, 4) do
       {:ok, %{state | peer_bitfield: MapSet.put(peer_bitfield, index)}}
     end
   end
 
-  @doc """
-  Handles bitfield
-  """
-  def handle_message(5, len, %{socket: socket} = state) do
+  # Handles bitfield
+  defp handle_message(5, len, %{socket: socket} = state) do
     with {:ok, data} <- :gen_tcp.recv(socket, len) do
       {:ok, %{state | peer_bitfield: make_map(data)}}
     end
   end
 
-  @doc """
-  Handles request
-  """
-  def handle_message(6, _, %{socket: socket, requested: requested} = state) do
+  # Handles request
+  defp handle_message(6, _, %{socket: socket, requested: requested} = state) do
     with {:ok, <<index::32, begin::32, len::32>>} <- :gen_tcp.recv(socket, 12) do
       {:ok, %{state | requested: MapSet.put(requested, {index, begin, len})}}
     end
   end
 
-  @doc """
-  Handles piece
-  """
-  def handle_message(7, len, %{socket: socket, piece: {index, data, size}} = state) do
+  # Handles piece
+  defp handle_message(7, len, %{socket: socket, piece: {index, data, size}} = state) do
     with {:ok, <<^index::32, begin::32, block::binary>>} <- :gen_tcp.recv(socket, len) do
       TorrentTable.downloaded(state.info_hash, byte_size(block))
       data = List.replace_at(data, div(begin, 16 * 1024), block)
@@ -312,35 +330,33 @@ defmodule Torrex.Peer.Worker do
     end
   end
 
-  @doc """
-  Handles cancel
-  """
-  def handle_message(8, _, %{socket: socket, requested: requested} = state) do
+  # Handles cancel
+  defp handle_message(8, _, %{socket: socket, requested: requested} = state) do
     with {:ok, <<index::32, begin::32, len::32>>} <- :gen_tcp.recv(socket, 12) do
       {:ok, %{state | requested: MapSet.delete(requested, {index, begin, len})}}
     end
   end
 
-  @doc """
-  Handles other messages
-  """
-  def handle_message(id, len, state) do
+  # Handles other messages
+  defp handle_message(id, len, state) do
     Logger.warn("Unknown id: #{id} with length: #{len}")
     {:ok, state}
   end
 
-  def make_map(bitfield, index \\ 0, data \\ MapSet.new())
+  @spec make_map(binary, non_neg_integer, MapSet.t()) :: MapSet.t()
+  defp make_map(bitfield, index \\ 0, data \\ MapSet.new())
 
-  def make_map(<<i::size(1), bitfield::bitstring>>, index, data) do
+  defp make_map(<<i::size(1), bitfield::bitstring>>, index, data) do
     data = if i == 1, do: MapSet.put(data, index), else: data
     make_map(bitfield, index + 1, data)
   end
 
-  def make_map(<<>>, _, data) do
+  defp make_map(<<>>, _, data) do
     data
   end
 
-  def make_bitfield(bitfield, pieces) do
+  @spec make_bitfield(MapSet.t(), non_neg_integer) :: binary
+  defp make_bitfield(bitfield, pieces) do
     pieces =
       case rem(pieces, 8) do
         0 -> pieces

@@ -36,10 +36,12 @@ defmodule Torrex.Tracker do
     GenServer.cast(pid, {:add_peers, interval, peers})
   end
 
+  @spec find_peers(pid) :: :ok
   def find_peers(pid) do
     GenServer.cast(pid, :find_peers)
   end
 
+  @impl true
   def init([info_hash, control_pid]) do
     {:ok, trackers} = TorrentTable.get_trackers(info_hash)
     trackers = Enum.map(trackers, fn t -> {t, @epoch, 0} end)
@@ -57,6 +59,7 @@ defmodule Torrex.Tracker do
     {:ok, state, {:continue, :announce}}
   end
 
+  @impl true
   def handle_continue(:announce, %{queued_message: msg, failed_trackers: failed} = state) do
     {url, trackers, failed} = contact_tracker(state.trackers, msg, state.info_hash, failed)
     new_state = %{state | current_tracker: url, trackers: trackers, failed_trackers: failed}
@@ -64,6 +67,7 @@ defmodule Torrex.Tracker do
     {:noreply, new_state}
   end
 
+  @impl true
   def handle_cast({:error, _msg}, %{current_tracker: current_tracker} = state) do
     tracker = {current_tracker, DateTime.utc_now(), 0}
     state = %{state | failed_trackers: [tracker | state.failed_trackers]}
@@ -71,11 +75,13 @@ defmodule Torrex.Tracker do
     {:noreply, state, {:continue, :announce}}
   end
 
+  @impl true
   def handle_cast({:warning, _url, msg}, state) do
     Logger.warn(msg)
     {:noreply, state}
   end
 
+  @impl true
   def handle_cast({:add_peers, {interval, _}, {_seeders, _leechers, peers}}, state) do
     TorrentControl.add_peers(state.control_pid, peers)
     trackers = [{state.current_tracker, DateTime.utc_now(), interval} | state.trackers]
@@ -93,23 +99,28 @@ defmodule Torrex.Tracker do
     {:noreply, state}
   end
 
+  @impl true
   def handle_cast(:find_peers, %{timer: timer} = state) when is_reference(timer) do
     Process.cancel_timer(timer)
     {:noreply, %{state | timer: nil}, {:continue, :announce}}
   end
 
+  @impl true
   def handle_cast(:find_peers, state) do
     {:noreply, state, {:continue, :announce}}
   end
 
+  @impl true
   def handle_cast(_msg, state) do
     {:noreply, state}
   end
 
+  @impl true
   def handle_info(:announce, state) do
     {:noreply, state, {:continue, :announce}}
   end
 
+  @impl true
   def handle_info(:timeout, state) do
     {:noreply, state}
   end
@@ -148,7 +159,6 @@ defmodule Torrex.Tracker do
     HTTP.contact_tracker(self(), URI.to_string(uri), event, info_hash)
   end
 
-  @spec contact_tracker(URI.t(), atom, binary) :: :ok | :error
   defp contact_tracker(%URI{scheme: "https"} = uri, event, info_hash) do
     HTTP.contact_tracker(self(), URI.to_string(uri), event, info_hash)
   end

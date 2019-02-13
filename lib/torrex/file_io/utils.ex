@@ -58,6 +58,7 @@ defmodule Torrex.FileIO.Utils do
     :crypto.hash(:sha, data) == hash
   end
 
+  @spec check_all_pieces(map) :: MapSet.t()
   def check_all_pieces(pieces) do
     {bitfield, {_path, fd}} =
       0..((Map.keys(pieces) |> length()) - 1)
@@ -80,6 +81,8 @@ defmodule Torrex.FileIO.Utils do
     bitfield
   end
 
+  @type file :: {Path.t(), File.io_device()}
+  @spec read_data(list, binary, file | nil) :: {binary, file}
   def read_data([{path, _offset, bytes_to_read} | rest], <<>>, nil) do
     {:ok, fd} = File.open(path, @read_opts)
     read_data(rest, IO.binread(fd, bytes_to_read), {path, fd})
@@ -99,6 +102,7 @@ defmodule Torrex.FileIO.Utils do
     {data, {path, fd}}
   end
 
+  @spec write_piece(binary, list) :: :ok
   def write_piece(<<>>, []) do
     :ok
   end

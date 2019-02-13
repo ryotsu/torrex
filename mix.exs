@@ -29,7 +29,7 @@ defmodule Torrex.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:dialyxir, "~> 1.0.0-rc.2", only: [:dev], runtime: false},
+      {:dialyxir, "~> 1.0.0-rc.4", only: [:dev], runtime: false},
       {:bento, "~> 0.9.2"},
       {:httpoison, "~> 1.1"},
       {:phoenix, "~> 1.4.0"},
