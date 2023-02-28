@@ -2,7 +2,7 @@ defmodule TorrexWeb.UserSocket do
   use Phoenix.Socket
 
   ## Channels
-  channel("torrex:*", TorrexWeb.TorrexChannel)
+  channel "torrex:*", TorrexWeb.TorrexChannel
 
   # Socket params are passed from the client and can
   # be used to verify and authenticate a user. After

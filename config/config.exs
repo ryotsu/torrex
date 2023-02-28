@@ -1,33 +1,51 @@
 # This file is responsible for configuring your application
-# and its dependencies with the aid of the Mix.Config module.
-use Mix.Config
+# and its dependencies with the aid of the Config module.
+#
+# This configuration file is loaded before any dependency and
+# is restricted to this project.
 
-# This configuration is loaded before any dependency and is restricted
-# to this project. If another project depends on this project, this
-# file won't be loaded nor affect the parent project. For this reason,
-# if you want to provide default values for your application for
-# 3rd-party users, it should be done in your "mix.exs" file.
+# General application configuration
+import Config
 
-# You can configure your application as:
-#
-#     config :torrex, key: :value
-#
-# and access this configuration in your application as:
-#
-#     Application.get_env(:torrex, :key)
-#
-# You can also configure a 3rd-party app:
-#
-#     config :logger, level: :info
-#
+# Configures the endpoint
+config :torrex, TorrexWeb.Endpoint,
+  url: [host: "localhost"],
+  render_errors: [
+    formats: [html: TorrexWeb.ErrorHTML, json: TorrexWeb.ErrorJSON],
+    layout: false
+  ],
+  pubsub_server: Torrex.PubSub,
+  live_view: [signing_salt: "t+hLil5y"]
 
-# It is also possible to import configuration files, relative to this
-# directory. For example, you can emulate configuration per environment
-# by uncommenting the line below and defining dev.exs, test.exs and such.
-# Configuration from the imported file will override the ones defined
-# here (which is why it is important to import them last).
-#
-#     import_config "#{Mix.env}.exs"
+# Configure esbuild (the version is required)
+config :esbuild,
+  version: "0.14.41",
+  default: [
+    args:
+      ~w(js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
+    cd: Path.expand("../assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ]
+
+# Configure tailwind (the version is required)
+config :tailwind,
+  version: "3.2.4",
+  default: [
+    args: ~w(
+      --config=tailwind.config.js
+      --input=css/app.css
+      --output=../priv/static/assets/app.css
+    ),
+    cd: Path.expand("../assets", __DIR__)
+  ]
+
+# Configures Elixir's Logger
+config :logger, :console,
+  format: "$time $metadata[$level] $message\n",
+  metadata: [:request_id]
+
+# Use Jason for JSON parsing in Phoenix
+config :phoenix, :json_library, Jason
 
 config :torrex,
   peer_id: :crypto.strong_rand_bytes(20) |> Base.url_encode64() |> binary_part(0, 20),
@@ -35,23 +53,6 @@ config :torrex,
   udp_port: Enum.random(21_001..22_000),
   download_dir: System.get_env("HOME") |> Path.join("Downloads")
 
-config :torrex, TorrexWeb.Endpoint,
-  url: [host: "localhost"],
-  secret_key_base: "RTrRiDVZy2ZFkbpWPXw2+eEmGP0FRDwEen1TkfmbNn++rYYFNaPGTHxn2gCMtZc+",
-  render_errors: [view: TorrexWeb.ErrorView, accepts: ~w(html json)],
-  pubsub: [name: Torrex.PubSub, adapter: Phoenix.PubSub.PG2]
-
-# Configures Elixir's Logger
-config :logger, :console,
-  format: "$time $metadata[$level] $message\n",
-  metadata: [:request_id]
-
-config :logger,
-  truncate: :infinity
-
-# Use Jason for JSON parsing in Phoenix
-config :phoenix, :json_library, Jason
-
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
-import_config "#{Mix.env()}.exs"
+import_config("#{config_env()}.exs")

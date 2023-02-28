@@ -1,9 +1,21 @@
 defmodule TorrexWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :torrex
 
+  # The session will be stored in the cookie and signed,
+  # this means its contents can be read but not tampered with.
+  # Set :encryption_salt if you would also like to encrypt it.
+  @session_options [
+    store: :cookie,
+    key: "_torrex_key",
+    signing_salt: "TPHlcxpX",
+    same_site: "Lax"
+  ]
+
   socket "/socket", TorrexWeb.UserSocket,
     websocket: true,
     longpoll: false
+
+  # socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
 
   # Serve at "/" the static files from "priv/static" directory.
   #
@@ -13,7 +25,7 @@ defmodule TorrexWeb.Endpoint do
     at: "/",
     from: :torrex,
     gzip: false,
-    only: ~w(css fonts images js favicon.ico robots.txt)
+    only: TorrexWeb.static_paths()
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
@@ -24,7 +36,7 @@ defmodule TorrexWeb.Endpoint do
   end
 
   plug Plug.RequestId
-  plug Plug.Logger
+  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
@@ -33,14 +45,17 @@ defmodule TorrexWeb.Endpoint do
 
   plug Plug.MethodOverride
   plug Plug.Head
-
-  # The session will be stored in the cookie and signed,
-  # this means its contents can be read but not tampered with.
-  # Set :encryption_salt if you would also like to encrypt it.
-  plug Plug.Session,
-    store: :cookie,
-    key: "_torrex_key",
-    signing_salt: "OGwNZvaI"
-
+  plug Plug.Session, @session_options
+  plug :introspect
   plug TorrexWeb.Router
+
+  def introspect(conn, _opts) do
+    IO.puts("""
+    Verb: #{inspect(conn.method)}
+    Host: #{inspect(conn.host)}
+    Headers: #{inspect(conn.req_headers)}
+    """)
+
+    conn
+  end
 end
