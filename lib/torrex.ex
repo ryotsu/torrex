@@ -6,6 +6,5 @@ defmodule Torrex do
   Contexts are also responsible for managing your data, regardless
   if it comes from the database, an external API or others.
   """
-
   defdelegate add_torrent(path), to: Torrex.TorrentTable
 end

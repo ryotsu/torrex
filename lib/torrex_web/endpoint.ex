@@ -7,7 +7,7 @@ defmodule TorrexWeb.Endpoint do
   @session_options [
     store: :cookie,
     key: "_torrex_key",
-    signing_salt: "TPHlcxpX",
+    signing_salt: "mRHRxEEg",
     same_site: "Lax"
   ]
 
@@ -15,7 +15,7 @@ defmodule TorrexWeb.Endpoint do
     websocket: true,
     longpoll: false
 
-  # socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
+  socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
 
   # Serve at "/" the static files from "priv/static" directory.
   #
@@ -46,16 +46,5 @@ defmodule TorrexWeb.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options
-  plug :introspect
   plug TorrexWeb.Router
-
-  def introspect(conn, _opts) do
-    IO.puts("""
-    Verb: #{inspect(conn.method)}
-    Host: #{inspect(conn.host)}
-    Headers: #{inspect(conn.req_headers)}
-    """)
-
-    conn
-  end
 end

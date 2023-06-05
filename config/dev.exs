@@ -4,8 +4,8 @@ import Config
 # debugging and code reloading.
 #
 # The watchers configuration can be used to run external
-# watchers to your application. For example, we use it
-# with esbuild to bundle .js and .css sources.
+# watchers to your application. For example, we can use it
+# to bundle .js and .css sources.
 config :torrex, TorrexWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
@@ -13,7 +13,7 @@ config :torrex, TorrexWeb.Endpoint,
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
-  secret_key_base: "gpZ+NvdexxCev9SQOXqP99jQsapISshWb4hOhBSn6nh/A4xxZwfOxJlpk3YlqavV",
+  secret_key_base: "rlFb9Pa1bA4H0UrwfwtIvha1FEqvQ5NEanSH7dPVglVGK+dFFVOzvkFcCEAeDMNo",
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:default, ~w(--sourcemap=inline --watch)]},
     tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]}

@@ -19,9 +19,6 @@ erl_crash.dump
 # Also ignore archive artifacts (built via "mix archive.build").
 *.ez
 
-# Temporary files, for example, from tests.
-/tmp/
-
 # Ignore package tarball (built via "mix hex.build").
 torrex-*.tar
 
@@ -35,3 +32,4 @@ torrex-*.tar
 npm-debug.log
 /assets/node_modules/
 
+.log/

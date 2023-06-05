@@ -5,7 +5,7 @@ defmodule TorrexWeb.Router do
     plug :accepts, ["html"]
     plug :fetch_session
     plug :fetch_live_flash
-    plug :put_root_layout, {TorrexWeb.Layouts, :root}
+    plug :put_root_layout, html: {TorrexWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
   end
@@ -18,9 +18,7 @@ defmodule TorrexWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
-
-    get "/torrent", TorrentController, :home
-    post "/torrent/add", TorrentController, :add
+    post "/add", PageController, :add
   end
 
   # Other scopes may use custom stacks.

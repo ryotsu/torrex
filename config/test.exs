@@ -4,7 +4,7 @@ import Config
 # you can enable the server option below.
 config :torrex, TorrexWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
-  secret_key_base: "bRexDMF8nsmwetNvpoIDwyg07ZpLNCgQkVOhU++2N15awIz1Vr6vlLMMr2qD45l2",
+  secret_key_base: "2u1WO7LKVsEZJiynNbPpyzO7I0RpkhybCj+eLGpMjoU3rc9e+ce2cM2DfRZPGsGt",
   server: false
 
 # Print only warnings and errors during test
