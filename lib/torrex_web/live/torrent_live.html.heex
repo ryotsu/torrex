@@ -1,0 +1,16 @@
+<.flash kind={:info} flash={@flash} />
+<.flash kind={:error} flash={@flash} />
+
+<div id="torrents" class="grid gap-4 grid-cols-1">
+  <%= for {id, value} <- @torrents do %>
+    <.live_component
+      module={TorrexWeb.TorrentComponent}
+      id={id}
+      name={value.name}
+      size={value.size}
+      left={value.left}
+      downloaded={value.downloaded}
+      download_speed={value.download_speed}
+    />
+  <% end %>
+</div>

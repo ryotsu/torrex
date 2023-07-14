@@ -16,8 +16,8 @@ defmodule Torrex.Torrent.Control do
 
   @check_wait_time 3000
 
-  @spec start_link(pid, binary) :: GenServer.on_start()
-  def start_link(sup_pid, info_hash) do
+  @spec start_link(list) :: GenServer.on_start()
+  def start_link([sup_pid, info_hash]) do
     GenServer.start_link(__MODULE__, [sup_pid, info_hash])
   end
 

@@ -10,22 +10,21 @@ defmodule Torrex.Torrent.Supervisor do
 
   @spec start_peer_manager(pid, binary, pid, pid) :: Supervisor.on_start_child()
   def start_peer_manager(pid, info_hash, control_pid, file_worker) do
-    child =
-      supervisor(Torrex.Peer.Manager, [info_hash, control_pid, file_worker], restart: :transient)
+    child = {Torrex.Peer.Manager, [info_hash, control_pid, file_worker]}
 
     Supervisor.start_child(pid, child)
   end
 
   @spec add_tracker(pid, binary, pid) :: Supervisor.on_start_child()
   def add_tracker(pid, info_hash, control_pid) do
-    child = worker(Torrex.Tracker, [info_hash, control_pid], restart: :transient)
+    child = {Torrex.Tracker, [info_hash, control_pid]}
 
     Supervisor.start_child(pid, child)
   end
 
   @spec start_file_worker(pid, binary, MapSet.t(), pid) :: Supervisor.on_start_child()
   def start_file_worker(pid, info_hash, bitfield, control_pid) do
-    child = worker(Torrex.FileIO.Worker, [info_hash, bitfield, control_pid], restart: :transient)
+    child = {Torrex.FileIO.Worker, [info_hash, bitfield, control_pid]}
 
     Supervisor.start_child(pid, child)
   end
@@ -33,9 +32,9 @@ defmodule Torrex.Torrent.Supervisor do
   @impl true
   def init(info_hash) do
     children = [
-      worker(Torrex.Torrent.Control, [self(), info_hash], restart: :transient)
+      {Torrex.Torrent.Control, [self(), info_hash]}
     ]
 
-    supervise(children, strategy: :one_for_all)
+    Supervisor.init(children, strategy: :one_for_all)
   end
 end

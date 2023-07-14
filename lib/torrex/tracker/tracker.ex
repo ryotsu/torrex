@@ -16,8 +16,8 @@ defmodule Torrex.Tracker do
 
   @epoch DateTime.from_unix(0) |> elem(1)
 
-  @spec start_link(binary, pid) :: GenServer.on_start()
-  def start_link(info_hash, control_pid) do
+  @spec start_link(list) :: GenServer.on_start()
+  def start_link([info_hash, control_pid]) do
     GenServer.start_link(__MODULE__, [info_hash, control_pid])
   end
 
@@ -77,13 +77,13 @@ defmodule Torrex.Tracker do
 
   @impl true
   def handle_cast({:warning, _url, msg}, state) do
-    Logger.warn(msg)
+    Logger.warning(msg)
     {:noreply, state}
   end
 
   @impl true
   def handle_cast({:add_peers, {interval, _}, {_seeders, _leechers, peers}}, state) do
-    TorrentControl.add_peers(state.control_pid, peers)
+    if peers != <<>>, do: TorrentControl.add_peers(state.control_pid, peers)
     trackers = [{state.current_tracker, DateTime.utc_now(), interval} | state.trackers]
     timer = Process.send_after(self(), :announce, (interval + 5) * 1000)
 

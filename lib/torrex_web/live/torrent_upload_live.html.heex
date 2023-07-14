@@ -1,0 +1,12 @@
+<.flash kind={:info} flash={@flash} />
+<.flash kind={:error} flash={@flash} />
+
+<form id="upload-form" phx-submit="save" phx-change="validate">
+  <.live_file_input
+    upload={@uploads.torrent}
+    class="cursor-pointer absolute block py-2 px-4 w-24 opacity-0 pin-r pin-t"
+  />
+  <button class="rounded-lg bg-zinc-100 px-2 py-1 hover:bg-zinc-200/80">
+    Add torrent <span aria-hidden="true">&rarr;</span>
+  </button>
+</form>

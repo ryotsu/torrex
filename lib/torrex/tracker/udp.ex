@@ -16,9 +16,9 @@ defmodule Torrex.Tracker.UDP do
 
   @timeout 15_000
 
-  @spec start_link(binary, integer, integer) :: GenServer.on_start()
-  def start_link(peer_id, tcp_port, udp_port) do
-    GenServer.start_link(__MODULE__, [peer_id, tcp_port, udp_port], name: __MODULE__)
+  @spec start_link([list]) :: GenServer.on_start()
+  def start_link(args) do
+    GenServer.start_link(__MODULE__, args, name: __MODULE__)
   end
 
   @spec contact_tracker(pid, ip, integer, atom, binary) :: :ok

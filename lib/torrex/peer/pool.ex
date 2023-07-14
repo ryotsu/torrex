@@ -5,8 +5,8 @@ defmodule Torrex.Peer.Pool do
 
   alias Torrex.Peer.Worker, as: PeerWorker
 
-  @spec start_link :: Supervisor.on_start()
-  def start_link do
+  @spec start_link(list) :: Supervisor.on_start()
+  def start_link(_) do
     DynamicSupervisor.start_link(__MODULE__, [])
   end
 

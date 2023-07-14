@@ -5,12 +5,14 @@ defmodule Torrex.Tracker.HTTP do
 
   use GenServer
 
+  require Logger
+
   alias Torrex.Tracker
   alias Torrex.TorrentTable
 
-  @spec start_link(binary, integer) :: GenServer.on_start()
-  def start_link(peer_id, port) do
-    GenServer.start_link(__MODULE__, [peer_id, port], name: __MODULE__)
+  @spec start_link(list) :: GenServer.on_start()
+  def start_link(arg) do
+    GenServer.start_link(__MODULE__, arg, name: __MODULE__)
   end
 
   @spec store_id(String.t(), String.t()) :: :ok
@@ -51,7 +53,7 @@ defmodule Torrex.Tracker.HTTP do
 
   @spec make_request(pid, String.t(), atom, binary, binary, integer) :: :ok
   def make_request(pid, url, event, info_hash, peer_id, port) do
-    request = build_reauest(url, event, info_hash, peer_id, port)
+    request = build_request(url, event, info_hash, peer_id, port)
 
     case HTTPoison.get(request) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
@@ -99,8 +101,8 @@ defmodule Torrex.Tracker.HTTP do
     Tracker.response(pid, {interval, min_interval}, {seeders, leechers, peers})
   end
 
-  @spec build_reauest(String.t(), atom, binary, binary, integer) :: String.t()
-  defp build_reauest(url, event, info_hash, peer_id, port) do
+  @spec build_request(String.t(), atom, binary, binary, integer) :: String.t()
+  defp build_request(url, event, info_hash, peer_id, port) do
     {:ok, torrent} = TorrentTable.get_torrent(info_hash)
 
     query = %{

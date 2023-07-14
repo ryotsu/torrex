@@ -3,7 +3,7 @@
 // import "./user_socket.js"
 
 import socket from "./user_socket";
-import { add_torrent, add_torrent_component, format_data } from "./torrents";
+// import { add_torrent, add_torrent_component, format_data } from "./torrents";
 
 // You can include dependencies in two ways.
 //
@@ -42,84 +42,82 @@ liveSocket.connect()
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket
 
+// let file_input = document.getElementById("add-torrent")
+// let on_file_select = () => add_torrent(file_input.files[0], csrfToken)
 
-let file_input = document.getElementById("add-torrent")
-let on_file_select = () => add_torrent(file_input.files[0], csrfToken)
+// file_input.addEventListener("change", on_file_select, false)
 
-file_input.addEventListener("change", on_file_select, false)
-
-let state = {}
 let channel = socket.channel("torrex:notifications", {})
 
 channel.join()
-  .receive("ok", resp => { init_torrents(resp) })
+  .receive("ok", resp => { console.log(resp) })
   .receive("error", resp => { console.log("Unable to join", resp) })
 
-channel.on("update", speeds => {
-  Object.keys(speeds).forEach(info_hash => {
-    let torrent = Object.assign({}, state[info_hash], { "download_speed": speeds[info_hash] })
-    state[info_hash] = torrent
+// channel.on("update", speeds => {
+//   Object.keys(speeds).forEach(info_hash => {
+//     let torrent = Object.assign({}, state[info_hash], { "download_speed": speeds[info_hash] })
+//     state[info_hash] = torrent
 
-    update_speed(info_hash, speeds[info_hash])
-  })
-})
+//     update_speed(info_hash, speeds[info_hash])
+//   })
+// })
 
-channel.on("saved", size => {
-  Object.keys(size).forEach(info_hash => {
-    let t = state[info_hash]
-    let torrent = Object.assign({}, t, {
-      "on_disk": t.on_disk + size[info_hash],
-      "left": t.left - size[info_hash]
-    })
-    state[info_hash] = torrent
+// channel.on("saved", size => {
+//   Object.keys(size).forEach(info_hash => {
+//     let t = state[info_hash]
+//     let torrent = Object.assign({}, t, {
+//       "on_disk": t.on_disk + size[info_hash],
+//       "left": t.left - size[info_hash]
+//     })
+//     state[info_hash] = torrent
 
-    update_size(info_hash, torrent.on_disk, torrent.size)
-  })
-})
+//     update_size(info_hash, torrent.on_disk, torrent.size)
+//   })
+// })
 
-channel.on("left", size => {
-  Object.keys(size).forEach(info_hash => {
-    let t = state[info_hash]
-    let torrent = Object.assign({}, t, {
-      "on_disk": t.size - size[info_hash],
-      "left": size[info_hash]
-    })
-    state[info_hash] = torrent
+// channel.on("left", size => {
+//   Object.keys(size).forEach(info_hash => {
+//     let t = state[info_hash]
+//     let torrent = Object.assign({}, t, {
+//       "on_disk": t.size - size[info_hash],
+//       "left": size[info_hash]
+//     })
+//     state[info_hash] = torrent
 
-    update_size(info_hash, torrent.on_disk, torrent.size)
-  })
-})
+//     update_size(info_hash, torrent.on_disk, torrent.size)
+//   })
+// })
 
-channel.on("added", torrents => {
-  init_torrents(torrents)
-})
+// channel.on("added", torrents => {
+//   init_torrents(torrents)
+// })
 
-let init_torrents = (torrents) => {
-  let container = document.getElementById("torrents")
-  Object.keys(torrents).map(info_hash => {
-    let t = torrents[info_hash]
-    let torrent = Object.assign({}, t, {
-      "on_disk": t.size - t.left,
-      "info_hash": info_hash
-    })
+// let init_torrents = (torrents) => {
+//   let container = document.getElementById("torrents")
+//   Object.keys(torrents).map(info_hash => {
+//     let t = torrents[info_hash]
+//     let torrent = Object.assign({}, t, {
+//       "on_disk": t.size - t.left,
+//       "info_hash": info_hash
+//     })
 
-    let node = add_torrent_component(torrent)
-    container.appendChild(node)
-    state[info_hash] = torrent
-  })
-}
+//     let node = add_torrent_component(torrent)
+//     container.appendChild(node)
+//     state[info_hash] = torrent
+//   })
+// }
 
-let update_speed = (info_hash, download_speed) => {
-  let elem = document.getElementById(info_hash).getElementsByClassName("download-speed")[0]
-  elem.textContent = `${format_data(download_speed)}/s`
-}
+// let update_speed = (info_hash, download_speed) => {
+//   let elem = document.getElementById(info_hash).getElementsByClassName("download-speed")[0]
+//   elem.textContent = `${format_data(download_speed)}/s`
+// }
 
-let update_size = (info_hash, on_disk, size) => {
-  let card = document.getElementById(info_hash)
-  card.getElementsByClassName("on-disk")[0].textContent = `${format_data(on_disk)}`
-  let progress = card.getElementsByClassName("progress-bar")[0]
-  if (on_disk == size) progress.classList.add("bg-success")
-  progress.setAttribute("aria-valuenow", size)
-  progress.style.width = `${(on_disk / size) * 100}%`
-  progress.textContent = `${((on_disk / size) * 100).toFixed(2)}%`
-}
+// let update_size = (info_hash, on_disk, size) => {
+//   let card = document.getElementById(info_hash)
+//   card.getElementsByClassName("on-disk")[0].textContent = `${format_data(on_disk)}`
+//   let progress = card.getElementsByClassName("progress-bar")[0]
+//   if (on_disk == size) progress.classList.add("bg-success")
+//   progress.setAttribute("aria-valuenow", size)
+//   progress.style.width = `${(on_disk / size) * 100}%`
+//   progress.textContent = `${((on_disk / size) * 100).toFixed(2)}%`
+// }

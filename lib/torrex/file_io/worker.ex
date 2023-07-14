@@ -11,8 +11,8 @@ defmodule Torrex.FileIO.Worker do
   alias Torrex.Torrent.Control, as: TorrentControl
   alias Torrex.FileIO.Utils, as: FileUtils
 
-  @spec start_link(binary, MapSet.t(), pid) :: GenServer.on_start()
-  def start_link(info_hash, bitfield, control_pid) do
+  @spec start_link(list) :: GenServer.on_start()
+  def start_link([info_hash, bitfield, control_pid]) do
     GenServer.start_link(__MODULE__, [info_hash, bitfield, control_pid])
   end
 

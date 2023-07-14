@@ -28,7 +28,7 @@ defmodule Torrex.Listener do
   end
 
   @impl true
-  def init(port) do
+  def init([port]) do
     {:ok, listen} = :gen_tcp.listen(port, [:binary, active: false])
 
     state = %{

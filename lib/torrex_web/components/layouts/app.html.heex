@@ -9,16 +9,7 @@
       </p>
     </div>
     <div class="flex items-center gap-4 font-semibold leading-6 text-zinc-900">
-      <button class="rounded-lg bg-zinc-100 px-2 py-1 hover:bg-zinc-200/80">
-        Add torrent <span aria-hidden="true">&rarr;</span>
-      </button>
-      <input
-        type="file"
-        class="cursor-pointer absolute block py-2 px-4 w-full opacity-0 pin-r pin-t"
-        id="add-torrent"
-        name="torrent"
-        accept=".torrent"
-      />
+      <%= live_render(@conn, TorrexWeb.TorrentUploadLive) %>
     </div>
   </div>
 </header>

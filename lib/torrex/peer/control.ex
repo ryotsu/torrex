@@ -13,8 +13,8 @@ defmodule Torrex.Peer.Control do
   @peer_limit 20
   @peer_id Application.get_env(:torrex, :peer_id)
 
-  @spec start_link(binary, pid, pid, pid) :: GenServer.on_start()
-  def start_link(info_hash, control_pid, file_worker, sup_pid) do
+  @spec start_link(list) :: GenServer.on_start()
+  def start_link([info_hash, control_pid, file_worker, sup_pid]) do
     GenServer.start_link(__MODULE__, [info_hash, control_pid, file_worker, sup_pid])
   end
 
