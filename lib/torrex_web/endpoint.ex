@@ -11,9 +11,9 @@ defmodule TorrexWeb.Endpoint do
     same_site: "Lax"
   ]
 
-  socket "/socket", TorrexWeb.UserSocket,
-    websocket: true,
-    longpoll: false
+  # socket "/socket", TorrexWeb.UserSocket,
+  #   websocket: true,
+  #   longpoll: false
 
   socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
 

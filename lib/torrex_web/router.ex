@@ -18,7 +18,6 @@ defmodule TorrexWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
-    post "/add", PageController, :add
   end
 
   # Other scopes may use custom stacks.

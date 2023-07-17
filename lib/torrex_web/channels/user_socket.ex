@@ -10,7 +10,7 @@ defmodule TorrexWeb.UserSocket do
   # Uncomment the following line to define a "room:*" topic
   # pointing to the `TorrexWeb.RoomChannel`:
   #
-  channel "torrex:*", TorrexWeb.NotificationChannel
+  # channel "torrex:*", TorrexWeb.NotificationChannel
   #
   # To create a channel file, use the mix task:
   #
