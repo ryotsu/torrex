@@ -19,7 +19,7 @@ defmodule Torrex.MixProject do
   def application do
     [
       mod: {Torrex.Application, []},
-      extra_applications: [:logger, :runtime_tools, :observer, :wx]
+      extra_applications: [:logger, :runtime_tools]
     ]
   end
 
@@ -43,7 +43,6 @@ defmodule Torrex.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
-      {:ssl_verify_fun, "~> 1.1.7", manager: :rebar3, override: true},
       {:bento, "~> 1.0"},
       {:httpoison, "~> 2.1"},
       {:dialyxir, "~> 1.3", only: [:dev], runtime: false},

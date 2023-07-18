@@ -10,7 +10,6 @@ defmodule Torrex.Listener do
   alias Torrex.Peer.Pool, as: PeerPool
 
   @pstr "BitTorrent protocol"
-  @peer_id Application.get_env(:torrex, :peer_id)
 
   @spec start_link(number) :: GenServer.on_start()
   def start_link(port) do
@@ -139,6 +138,8 @@ defmodule Torrex.Listener do
 
   @spec compose_handshake(binary) :: binary
   defp compose_handshake(info_hash) do
-    <<byte_size(@pstr)::size(8), @pstr::bytes, 0::size(64), info_hash::bytes, @peer_id::bytes>>
+    peer_id = Application.get_env(:torrex, :peer_id)
+
+    <<byte_size(@pstr)::size(8), @pstr::bytes, 0::size(64), info_hash::bytes, peer_id::bytes>>
   end
 end

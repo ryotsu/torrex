@@ -1,4 +1,8 @@
 defmodule TorrexWeb.TorrentLive do
+  @moduledoc """
+  Displays all the torrents in a list and handles messages from the torrent table
+  """
+  require Logger
   use Phoenix.LiveView
 
   import TorrexWeb.CoreComponents, [:flash]
@@ -41,7 +45,7 @@ defmodule TorrexWeb.TorrentLive do
   end
 
   def handle_info(msg, socket) do
-    IO.inspect(msg)
+    Logger.warning("Unhandled message: #{msg}")
     {:noreply, socket}
   end
 end

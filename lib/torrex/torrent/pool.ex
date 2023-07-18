@@ -1,4 +1,6 @@
 defmodule Torrex.Torrent.Pool do
+  @moduledoc false
+
   alias Torrex.Torrent.Supervisor, as: TorrentSupervisor
 
   @spec add_torrent(binary, String.t()) :: Supervisor.on_start_child()

@@ -1,4 +1,8 @@
 defmodule TorrexWeb.TorrentComponent do
+  @moduledoc """
+  Displays individual torrent and its progress bar
+  """
+
   import TorrexWeb.CoreComponents, [:icon]
 
   use Phoenix.LiveComponent

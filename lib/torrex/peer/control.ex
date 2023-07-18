@@ -1,4 +1,8 @@
 defmodule Torrex.Peer.Control do
+  @moduledoc """
+  Manages communication with the peer
+  """
+
   use GenServer
 
   require Logger
@@ -11,7 +15,6 @@ defmodule Torrex.Peer.Control do
 
   @pstr "BitTorrent protocol"
   @peer_limit 20
-  @peer_id Application.get_env(:torrex, :peer_id)
 
   @spec start_link(list) :: GenServer.on_start()
   def start_link([info_hash, control_pid, file_worker, sup_pid]) do
@@ -207,6 +210,8 @@ defmodule Torrex.Peer.Control do
 
   @spec compose_handshake(binary) :: binary
   defp compose_handshake(info_hash) do
-    <<byte_size(@pstr)::size(8), @pstr::bytes, 0::size(64), info_hash::bytes, @peer_id::bytes>>
+    peer_id = Application.get_env(:torrex, :peer_id)
+
+    <<byte_size(@pstr)::size(8), @pstr::bytes, 0::size(64), info_hash::bytes, peer_id::bytes>>
   end
 end

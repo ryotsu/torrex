@@ -1,4 +1,6 @@
 defmodule Torrex.Peer.Manager do
+  @moduledoc false
+
   use Supervisor
 
   @spec start_link(list) :: Supervisor.on_start()

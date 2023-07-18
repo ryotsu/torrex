@@ -1,4 +1,9 @@
 defmodule Torrex.Torrent.Supervisor do
+  @moduledoc """
+  Top supervisor handling for each torrent.
+  Handles peers, trackers and files.
+  """
+
   use Supervisor
 
   @spec start_link(binary, String.t()) :: Supervisor.on_start()

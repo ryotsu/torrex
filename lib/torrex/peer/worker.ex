@@ -104,7 +104,7 @@ defmodule Torrex.Peer.Worker do
     case TorrentControl.next_piece(st.control_pid, st.peer_bitfield) do
       {:ok, index, size} ->
         request(index, 0, size, st)
-        data = [0] |> Stream.cycle() |> Enum.take(trunc(:math.ceil(size / 16384)))
+        data = [0] |> Stream.cycle() |> Enum.take(trunc(:math.ceil(size / 16_384)))
         receive_message(%{st | status: :downloading, piece: {index, data, size}})
 
       {:error, :no_available_piece} ->

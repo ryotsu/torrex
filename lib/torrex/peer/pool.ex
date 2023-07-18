@@ -1,4 +1,8 @@
 defmodule Torrex.Peer.Pool do
+  @moduledoc """
+  DynamicSupervisor for handling all the peers.
+  """
+
   use DynamicSupervisor
 
   require Logger
