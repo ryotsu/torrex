@@ -173,9 +173,9 @@ defmodule Torrex.Peer.Worker do
     :gen_tcp.send(socket, <<5::size(32), 4::size(8), index::size(32)>>)
   end
 
-  # def have(index, state) do
-  #   Logger.debug("#{index}: #{inspect(state)}")
-  # end
+  defp have(index, state) do
+    Logger.debug("#{index}: #{inspect(state)}")
+  end
 
   @spec bitfield(map) :: :ok
   defp bitfield(%{socket: socket, am_bitfield: bitfield} = state) do
