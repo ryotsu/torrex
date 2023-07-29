@@ -14,7 +14,7 @@ defmodule TorrexWeb.TorrentComponent do
       <div class="flex space-x-4">
         <div class="shrink-0">
           <%= if @left == 0 do %>
-            <.icon name="hero-check-circle" class="h-10 w-10" />
+            <.icon name="hero-check-circle" class="h-10 w-10 text-green-600" />
           <% else %>
             <.icon name="hero-arrow-down-circle" class="h-10 w-10" />
           <% end %>
