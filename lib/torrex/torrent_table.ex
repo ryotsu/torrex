@@ -3,12 +3,6 @@ defmodule Torrex.TorrentTable do
   Stores data about torrents and manages addition/deletion
   """
 
-  @dialyzer [
-    {:no_match, handle_call: 3},
-    {:no_unused, notify_added: 2},
-    {:no_unused, make_torrent_payload: 1}
-  ]
-
   use GenServer
 
   require Logger

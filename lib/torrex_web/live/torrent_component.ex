@@ -13,7 +13,11 @@ defmodule TorrexWeb.TorrentComponent do
     <div class="p-6 w-full mx-auto bg-white rounded-xl shadow-lg flex flex-col items-stretch space-y-4">
       <div class="flex space-x-4">
         <div class="shrink-0">
-          <.icon name="hero-arrow-down-circle" class="h-10 w-10" />
+          <%= if @left == 0 do %>
+            <.icon name="hero-check-circle" class="h-10 w-10" />
+          <% else %>
+            <.icon name="hero-arrow-down-circle" class="h-10 w-10" />
+          <% end %>
         </div>
         <div>
           <div class="text-xl font-medium text-black"><%= @name %></div>

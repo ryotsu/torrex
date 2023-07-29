@@ -14,7 +14,7 @@ defmodule Torrex.Peer.Control do
   alias Torrex.Listener
 
   @pstr "BitTorrent protocol"
-  @peer_limit 20
+  @peer_limit 50
 
   @spec start_link(list) :: GenServer.on_start()
   def start_link([info_hash, control_pid, file_worker, sup_pid]) do

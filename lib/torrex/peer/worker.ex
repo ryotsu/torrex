@@ -139,22 +139,22 @@ defmodule Torrex.Peer.Worker do
     :ok
   end
 
-  # @spec keep_alive(map) :: :ok
-  # defp keep_alive(%{socket: socket}) do
-  #   :gen_tcp.send(socket, <<0::size(32)>>)
-  # end
+  @spec keep_alive(map) :: :ok
+  defp keep_alive(%{socket: socket}) do
+    :gen_tcp.send(socket, <<0::size(32)>>)
+  end
 
-  # @spec choke(map) :: map
-  # defp choke(%{socket: socket} = state) do
-  #   :gen_tcp.send(socket, <<1::size(32), 0::size(8)>>)
-  #   %{state | am_choking: true}
-  # end
+  @spec choke(map) :: map
+  defp choke(%{socket: socket} = state) do
+    :gen_tcp.send(socket, <<1::size(32), 0::size(8)>>)
+    %{state | am_choking: true}
+  end
 
-  # @spec unchoke(map) :: map
-  # defp unchoke(%{socket: socket} = state) do
-  #   :gen_tcp.send(socket, <<1::size(32), 1::size(8)>>)
-  #   %{state | am_choking: false}
-  # end
+  @spec unchoke(map) :: map
+  defp unchoke(%{socket: socket} = state) do
+    :gen_tcp.send(socket, <<1::size(32), 1::size(8)>>)
+    %{state | am_choking: false}
+  end
 
   @spec interested(map) :: map
   defp interested(%{socket: socket} = state) do
@@ -162,11 +162,11 @@ defmodule Torrex.Peer.Worker do
     %{state | am_interested: true}
   end
 
-  # @spec not_interested(map) :: map
-  # defp not_interested(%{socket: socket} = state) do
-  #   :gen_tcp.send(socket, <<1::size(32), 3::size(8)>>)
-  #   %{state | am_interested: false}
-  # end
+  @spec not_interested(map) :: map
+  defp not_interested(%{socket: socket} = state) do
+    :gen_tcp.send(socket, <<1::size(32), 3::size(8)>>)
+    %{state | am_interested: false}
+  end
 
   @spec have(non_neg_integer, map) :: :ok
   defp have(index, %{socket: socket}) do
@@ -202,16 +202,16 @@ defmodule Torrex.Peer.Worker do
     make_request_data(index, begin + req_len, len - req_len, data)
   end
 
-  # @spec piece(non_neg_integer, non_neg_integer, binary, map) :: map
-  # defp piece(index, begin, block, %{socket: socket, requested: requested} = state) do
-  #   :gen_tcp.send(socket, <<9 + byte_size(block)::32, 7::8, index::32, begin::32, block::binary>>)
-  #   %{state | requested: MapSet.delete(requested, {index, begin, byte_size(block)})}
-  # end
+  @spec piece(non_neg_integer, non_neg_integer, binary, map) :: map
+  defp piece(index, begin, block, %{socket: socket, requested: requested} = state) do
+    :gen_tcp.send(socket, <<9 + byte_size(block)::32, 7::8, index::32, begin::32, block::binary>>)
+    %{state | requested: MapSet.delete(requested, {index, begin, byte_size(block)})}
+  end
 
-  # @spec cancel(non_neg_integer, non_neg_integer, non_neg_integer, map) :: :ok
-  # defp cancel(index, begin, len, %{socket: socket}) do
-  #   :gen_tcp.send(socket, <<13::32, 8::8, index::32, begin::32, len::32>>)
-  # end
+  @spec cancel(non_neg_integer, non_neg_integer, non_neg_integer, map) :: :ok
+  defp cancel(index, begin, len, %{socket: socket}) do
+    :gen_tcp.send(socket, <<13::32, 8::8, index::32, begin::32, len::32>>)
+  end
 
   @spec make_cancel_data(non_neg_integer, non_neg_integer, non_neg_integer, binary) :: binary
   defp make_cancel_data(index, begin, len, data \\ <<>>)

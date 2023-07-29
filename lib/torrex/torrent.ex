@@ -3,8 +3,6 @@ defmodule Torrex.Torrent do
   Defines Torrent struct
   """
 
-  @dialyzer {:no_fail_call, parse_file: 1}
-
   defstruct [
     :name,
     :info_hash,

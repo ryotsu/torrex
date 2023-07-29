@@ -14,7 +14,6 @@ defmodule Torrex.Supervisor do
   def init([peer_id, tcp_port, udp_port]) do
     children = [
       {DynamicSupervisor, name: Torrex.Torrent.Pool, strategy: :one_for_one},
-      # Torrex.Torrent.Pool,
       {Torrex.Tracker.Pool, [peer_id, tcp_port, udp_port]},
       {Torrex.TorrentTable, [peer_id]},
       {Torrex.Listener, [tcp_port]}
